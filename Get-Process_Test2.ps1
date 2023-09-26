@@ -1,0 +1,1 @@
+Get-Process | select -first 10 | ft
