@@ -98,7 +98,7 @@ Function Show-Menu {
     Show-Title $Title;
 	Clear-Host;
     Write-Host "`n  ================ $Title ================`n";
-    Write-Host "  1: Press '1' for Start SCOM MaintenanceMode for Local Server.";
+    #  Write-Host "  1: Press '1' for Start SCOM MaintenanceMode for Local Server.";
     Write-Host "  5: Press '5' for Get-LatestReboot for Local Server.";
     Write-Host "  6: Press '6' for Get-LatestReboot for Domain Servers.";
     Write-Host "  9: Press '9' for this option.";
@@ -110,13 +110,16 @@ do {
     Show-Menu
     $selection = Read-Host "`n  Please make a selection"
     switch ($selection){
-      "1" { "`n`n  You selected: Start SCOM MaintenanceMode  for Local Server`n"
+      "1" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
         ## Verify and Elevated Script
         #If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
         #  Set-ExecutionPolicy -Scope Process -ExecutionPolicy bypass; $arguments = "& '" + $myinvocation.mycommand.definition + "'";
         #  Start-Process powershell -Verb runAs -ArgumentList $arguments; Break;}
           StartSCOMMaintenanceMode;
         Sleep 10;
+        };
+      "2" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
+        $GitHubRawLink = "https://raw.githubusercontent.com/jholst71/public/main/Start_SCOM_MaintenanceMode.ps1"; IEX ((New-Object System.Net.WebClient).DownloadString($GitHubRawLink));
         };
       "5" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
         $Result = Get-LatestReboot;
