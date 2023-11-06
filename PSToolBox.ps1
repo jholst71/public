@@ -87,7 +87,6 @@ Function StartSCOMMaintenanceMode {
   #Stop-Service -Name "HealthService" -force; Get-Service -Name "HealthService";
   #Start-Service -Name "HealthService"; Get-Service -Name "HealthService";
   };
-
 Function Show-Title {
     param ( [string]$Title );
     $host.UI.RawUI.WindowTitle = $Title;
@@ -113,10 +112,10 @@ do {
     switch ($selection){
       "1" { "`n`n  You selected: Start SCOM MaintenanceMode  for Local Server`n"
         ## Verify and Elevated Script
-        If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-          Set-ExecutionPolicy -Scope Process -ExecutionPolicy bypass; $arguments = "& '" + $myinvocation.mycommand.definition + "'";
-          Start-Process powershell -Verb runAs -ArgumentList $arguments; Break;}
-		StartSCOMMaintenanceMode;
+        #If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+        #  Set-ExecutionPolicy -Scope Process -ExecutionPolicy bypass; $arguments = "& '" + $myinvocation.mycommand.definition + "'";
+        #  Start-Process powershell -Verb runAs -ArgumentList $arguments; Break;}
+          StartSCOMMaintenanceMode;
         Sleep 10;
         };
       "5" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
@@ -132,9 +131,10 @@ do {
       "9" { "`n`n  You selected: option #3`n"
       Sleep 10;
       };
-      "3" { "`n`n  You selected: option #3`n"
-      Sleep 10;
-	  };
+      "I" { "`n`n  You selected: Information option `n"
+        "  Information will be updated later"
+        Sleep 10;
+      };
     };
     #Pause;
  } until (($selection -eq "q") -or ($selection -eq "0"));
