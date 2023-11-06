@@ -74,39 +74,62 @@ Function Get-LatestRebootDomain {
     $Return.LatestBootEvents = $FResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName;
     Return $Return;
 };
+Function StartSCOMMaintenanceMode {
+  param( 
+    $fDuration  = ("30" | %{ If($Entry = Read-Host "  Enter MaintenanceMode Duration ( Default: $_ )"){$Entry} Else {$_} }),
+    $fComments = "SCOM MaintenanceMode started for $($SCOMMaintenanceModeDuration) minutes from $($env:Computername) by $($Env:USERNAME) at $(Get-Date)"
+    )
+  ## Script Begin
+  Import-Module "C:\Program Files\Microsoft Monitoring Agent\Agent\MaintenanceMode.dll";
+  try { Start-SCOMAgentMaintenanceMode -Reason "PlannedOther" -Duration $fDuration -Comment $fComments -Force Y;
+      } catch { Start-SCOMAgentMaintenanceMode -Reason "PlannedOther" -Duration $fDuration -Comment $fComments;}
+  Write-Host "Request: Start SCOM Maintenance Mode for $($fDuration) minutes";
+  #Stop-Service -Name "HealthService" -force; Get-Service -Name "HealthService";
+  #Start-Service -Name "HealthService"; Get-Service -Name "HealthService";
+  };
+
 Function Show-Title {
-  param ( [string]$Title );
+    param ( [string]$Title );
     $host.UI.RawUI.WindowTitle = $Title;
 };
 Function Show-Menu {
-  param (
-    [string]$Title = "Toolbox"
+    param (
+        [string]$Title = "Progressive Toolbox"
     );
     Show-Title $Title;
-    Clear-Host;
+	Clear-Host;
     Write-Host "`n  ================ $Title ================`n";
-    Write-Host "  1: Press '1' for Get-LatestReboot for Local Server.";
-    Write-Host "  2: Press '2' for Get-LatestReboot for Domain Servers.";
-    Write-Host "  3: Press '3' for this option.";
+    Write-Host "  1: Press '1' for Start SCOM MaintenanceMode for Local Server.";
+    Write-Host "  5: Press '5' for Get-LatestReboot for Local Server.";
+    Write-Host "  6: Press '6' for Get-LatestReboot for Domain Servers.";
+    Write-Host "  9: Press '9' for this option.";
     Write-Host "  I: Press 'I' for Toolbox Information.";
     Write-Host "  Q: Press 'Q' to quit.";
 };
 Function ToolboxMenu {
-  do {
+do {
     Show-Menu
     $selection = Read-Host "`n  Please make a selection"
     switch ($selection){
-      "1" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
+      "1" { "`n`n  You selected: Start SCOM MaintenanceMode  for Local Server`n"
+        ## Verify and Elevated Script
+        If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy bypass; $arguments = "& '" + $myinvocation.mycommand.definition + "'";
+          Start-Process powershell -Verb runAs -ArgumentList $arguments; Break;}
+		StartSCOMMaintenanceMode;
+        Sleep 10;
+        };
+      "5" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
         $Result = Get-LatestReboot;
         $Result.LatestBootEventsExtended | FL; $result.LatestBootEvents | FT -Autosize; $result.LatestBootTime | FT  -Autosize;
         Pause;
         };
-      "2" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
+      "6" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
         $Result = Get-LatestRebootDomain;
         $Result.LatestBootEvents | FT -Autosize;
         Pause;
         };
-      "3" { "`n`n  You selected: option #3`n"
+      "9" { "`n`n  You selected: option #3`n"
       Sleep 10;
       };
       "3" { "`n`n  You selected: option #3`n"
