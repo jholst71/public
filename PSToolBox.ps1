@@ -75,7 +75,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     $Return.LatestBootEvents = $fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName;
     Return $Return;
 };
-Function Get-HotFixInstallDates { ### Get-HotFixInstallDates for multiple Domain servers
+Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
     $fCustomerName  = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
     $fQueryComputerSearch  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
@@ -188,6 +188,17 @@ Function ToolboxMenu {
         $Result.LatestBootEvents | FT -Autosize;
         Pause;
       };
+      "7" { "`n`n  You selected: Get-HotFixInstallDates for Locla Server`n"
+        $Result = Get-HotFixInstallDates;
+        $Result.HotFixInstallDates | FT -Autosize;
+        Pause;
+      };
+      "8" { "`n`n  You selected: Get-HotFixInstallDates for Domain Servers`n"
+        $Result = Get-HotFixInstallDatesDomain;
+        $Result.HotFixInstallDates | FT -Autosize;
+        Pause;
+      };
+      
       "9" { "`n`n  You selected: option #3`n"
         Sleep 10;
       };
