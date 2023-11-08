@@ -34,10 +34,8 @@ Function Get-LatestReboot { ### Get-LatestReboot - Get Latest Reboot / Restart /
 Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for multiple Domain servers
   Param(
     $fCustomerName  = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
-    #$fQueryComputerSearch = @("BORG19RDS*"),
-	$fQueryComputerSearch  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ("BORG19RDSCB01","BORG19RDSCB02","BORG19RDSGW01","BORG19RDSGW02"),
-	#$fQueryComputerExcludeList  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerSearch  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerExcludeList  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
     $fLastXHours  = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
@@ -77,6 +75,64 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     $Return.LatestBootEvents = $fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName;
     Return $Return;
 };
+Function Get-HotFixInstallDates { ### Get-HotFixInstallDates for multiple Domain servers
+  Param(
+    $fCustomerName  = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
+    $fQueryComputerSearch  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerExcludeList  = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Days)"){$Entry} Else {$_} }),
+    #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fExport = "Yes",
+    $fFileName =  "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)",
+    #$fFileName =  "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)",
+    );
+  ## Script
+    Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates multiple Domain Servers";
+    $fQueryComputers = (Get-QueryComputers -FQueryComputerSearch $fQueryComputerSearch -FQueryComputerExcludeList $fQueryComputerExcludeList).name; # Get Values like .Name, .DNSHostName
+    $fResult = @(); $fResult = Foreach ($fQueryComputer in $fQueryComputers) {
+      Write-Host "  Querying Server: $($fQueryComputer.Name)";
+      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
+        $fInstalledHotfixes = Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $HotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
+        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$((Get-ComputerInfo).WindowsProductName)";
+        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike "127.0.0.1" }).IPAddress)";
+        $fInstalledHotfixes; 
+      } Else {
+        try {
+          $fInstalledHotfixes = Get-Hotfix -ComputerName $QueryComputer.Name | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $HotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
+          $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$($QueryComputer.OperatingSystem)";
+          $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$($QueryComputer.IPv4Address)";
+          $fInstalledHotfixes; 
+        } catch {
+          Write-Host "      An error occurred within the Get-Hotfix command:"
+          Write-Host "      $($_.ScriptStackTrace)"
+          Write-Host "    Trying with an Invoked Get-Hotfix command: "
+          try {
+            $fInstalledHotfixes = Invoke-Command -scriptblock { Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $USING:HotfixInstallDates  | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;  } -computername $QueryComputer
+            $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$($QueryComputer.OperatingSystem)";
+            $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$($QueryComputer.IPv4Address)";
+            $fInstalledHotfixes; 
+          } catch {
+            Write-Host "      An error occurred within the Invoked Get-Hotfix command:"
+            Write-Host "      $($_.ScriptStackTrace)`n"
+            $fInstalledHotfixes = [pscustomobject]@{
+              "PSComputerName" = "$($QueryComputer.Name)"
+              "Description" = ""
+              "HotFixID" = ""
+              "InstalledBy" = ""
+              "InstalledOn" = ""
+              "IPv4Address" = "$($QueryComputer.IPv4Address)"
+              "OperatingSystem" = "$($QueryComputer.OperatingSystem)"};
+            $fInstalledHotfixes; 
+    }}}};
+  ## Output
+    #$fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName | FT -autosize;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort PSComputerName | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn, OperatingSystem, IPv4Address | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.HotFixInstallDates = $fResult | sort PSComputerName | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn, OperatingSystem, IPv4Address;
+    Return $Return;
+};
 Function StartSCOMMaintenanceMode {
   param( 
     $fDuration  = ("30" | %{ If($Entry = Read-Host "  Enter MaintenanceMode Duration ( Default: $_ )"){$Entry} Else {$_} }),
@@ -103,6 +159,8 @@ Function Show-Menu {
   #Write-Host "  2: Press '2' for Start SCOM MaintenanceMode for Local Server (Script).";
   Write-Host "  5: Press '5' for Get-LatestReboot for Local Server.";
   Write-Host "  6: Press '6' for Get-LatestReboot for Domain Servers.";
+  #Write-Host "  7: Press '7' for Get-HotFixInstallDates for Local Server.";
+  Write-Host "  8: Press '8' for Get-HotFixInstallDates for Domain Servers.";
   Write-Host "  9: Press '9' for this option.";
   Write-Host "  I: Press 'I' for Toolbox Information.";
   Write-Host "  Q: Press 'Q' to quit.";
