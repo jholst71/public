@@ -83,8 +83,9 @@ Function Get-HotFixInstallDates { ### Get-HotFixInstallDates for multiple Domain
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Days)"){$Entry} Else {$_} }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
-    $fFileName =  "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)"
-    #$fFileName =  "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName =  "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)",
+    #$fFileName =  "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)",
+    $fJobNamePrefix = "RegQuery_"
     );
   ## Script
     Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates multiple Domain Servers";
