@@ -231,9 +231,9 @@ Function Show-Title {
     $host.UI.RawUI.WindowTitle = $Title;
 };
 Function Show-Help {
-  Show-Title "$($Title) Help & Information";
+  Show-Title "$($Title) Help / Information";
   Clear-Host;
-  Write-Host "  Help & Information will be updated later";
+  Write-Host "  Help / Information will be updated later";
 };
 Function Show-Menu {
   param (
@@ -253,7 +253,7 @@ Function Show-Menu {
   Write-Host "  12: Press '12' for Get-HotFixInstallDates for Domain Servers.";
   #Write-Host "  99: Press '99' for this option.";
   Write-Host "  ";
-  Write-Host "   H: Press 'H'  for Toolbox Help & Information.";
+  Write-Host "   H: Press 'H'  for Toolbox Help / Information.";
   Write-Host "   Q: Press 'Q'  to quit.";
 };
 Function ToolboxMenu {
@@ -301,7 +301,7 @@ Function ToolboxMenu {
       "99" { "`n`n  You selected: Test option #99`n"
         Sleep 10;
       };
-      "H" { "`n`n  You selected: Help & Information option `n"
+      "H" { "`n`n  You selected: Help / Information option `n"
         Show-Help;
         Pause;
       };
