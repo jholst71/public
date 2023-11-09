@@ -3,7 +3,7 @@
 Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names 
   Param( $fQueryComputerSearch, $fQueryComputerExcludeList )
   ## Script
-    $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
+    $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
     $fQueryComputers = $fQueryComputers | Sort Name;
     Return $fQueryComputers;
 };
