@@ -153,7 +153,7 @@ Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple D
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Select InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{}
-    $Return.fInstalledHotfixes = $fResult | Select InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
+    $Return.HotFixInstallDates = $fResult | Select InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
     Return $Return;
 };
 Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple Domain servers
@@ -231,9 +231,10 @@ Function Show-Title {
     $host.UI.RawUI.WindowTitle = $Title;
 };
 Function Show-Help {
-  Write-Host "  Help / Information will be updated later";
+  Show-Title "$($Title) Help & Information;
+  Clear-Host;
+  Write-Host "  Help & Information will be updated later";
 };
-
 Function Show-Menu {
   param (
     [string]$Title = "Progressive Toolbox"
@@ -248,11 +249,11 @@ Function Show-Menu {
   Write-Host "   7: Press '7'  for Get-LoginLogoff for Local Server.";
   Write-Host "   8: Press '8'  for Get-LoginLogoff for Domain Servers.";
   Write-Host "  ";
-  #Write-Host "  11: Press '11' for Get-HotFixInstallDates for Local Server.";
+  Write-Host "  11: Press '11' for Get-HotFixInstallDates for Local Server.";
   Write-Host "  12: Press '12' for Get-HotFixInstallDates for Domain Servers.";
   #Write-Host "  99: Press '99' for this option.";
   Write-Host "  ";
-  Write-Host "   H: Press 'H'  for Toolbox Help / Information.";
+  Write-Host "   H: Press 'H'  for Toolbox Help & Information.";
   Write-Host "   Q: Press 'Q'  to quit.";
 };
 Function ToolboxMenu {
@@ -300,7 +301,7 @@ Function ToolboxMenu {
       "99" { "`n`n  You selected: Test option #99`n"
         Sleep 10;
       };
-      "H" { "`n`n  You selected: Help / Information option `n"
+      "H" { "`n`n  You selected: Help & Information option `n"
         Show-Help;
         Pause;
       };
