@@ -9,11 +9,11 @@ Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
 };
 Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for logged on server
   Param(
-    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)",
-    #$fFileName = "$($env:USERPROFILE)\Desktop\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)",
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
-    $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } })
+    $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } }),
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
     $fEventLogStartTime = [DateTime]::Now.AddDays(-$($fLastXDays)).AddHours(-$($fLastXHours));
@@ -35,17 +35,17 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
   Param(
     $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
     #$fQueryComputerSearch = @("BORG19RDS*"),
-	$fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fQueryComputerExcludeList = ("BORG19RDSCB01","BORG19RDSCB02","BORG19RDSGW01","BORG19RDSGW02"),
-	#$fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    #$fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
     $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
     $fExportExtended = ("Yes" | %{ If($Entry = Read-Host "  Export Standard & Extended(message included) result to file - ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-LatestReboot_$(get-date -f yyyy-MM-dd_HH.mm)",
-    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-LatestReboot_$(get-date -f yyyy-MM-dd_HH.mm)",
-    $fJobNamePrefix = "RegQuery_"
+    $fJobNamePrefix = "RegQuery_",
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-LatestReboot_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-LatestReboot_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
     $fEventLogStartTime = [DateTime]::Now.AddDays(-$($fLastXDays)).AddHours(-$($fLastXHours));
@@ -104,7 +104,6 @@ Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
     $Return.LoginLogoff = $fResult | sort User, Time;
     Return $Return;
 };
-
 Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Log: Microsoft-Windows-Winlogon
 #
   Param(
@@ -114,7 +113,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
     $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } }),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-LatestLoginLogoff_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-LatestLoginLogoff_$(get-date -f yyyy-MM-dd_HH.mm)",
     #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-LatestLoginLogoff_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Default Variables
@@ -141,17 +140,17 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
 
 Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
-    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)",
-    #$fFileName = "$($env:USERPROFILE)\Desktop\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)",
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
-    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} })
+    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
     );
   ## Script
     Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates Local Server";
-    $fInstalledHotfixes = Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $fHotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
-    $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$((Get-ComputerInfo).WindowsProductName)";
-    $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike "127.0.0.1" }).IPAddress)";
-    $fInstalledHotfixes; 
+        $fInstalledHotfixes = Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $fHotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
+        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$((Get-ComputerInfo).WindowsProductName)";
+        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike "127.0.0.1" }).IPAddress)";
+        $fInstalledHotfixes; 
   ## Output
     #$fResult | sort MachineName, TimeGenerated | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | FT -autosize;
   ## Exports
@@ -161,7 +160,6 @@ Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple D
     $Return.HotFixInstallDates = $fResult | sort PSComputerName | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
     Return $Return;
 };
-
 Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
     $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
@@ -170,9 +168,8 @@ Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple 
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
-    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)",
-    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)",
-    $fJobNamePrefix = "RegQuery_"
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)"
     );
   ## Script
     Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates multiple Domain Servers";
@@ -263,7 +260,7 @@ Function ToolboxMenu {
     $selection = Read-Host "`n  Please make a selection"
     switch ($selection){
       "1" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
-		StartSCOMMaintenanceMode;
+        StartSCOMMaintenanceMode;
         Sleep 10;
       };
       "2" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
@@ -281,16 +278,16 @@ Function ToolboxMenu {
       };
       "7" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
         $Result = Get-LoginLogoffLocal;
-        $Result.LatestBootEventsExtended | FL; $result.LatestBootEvents | FT -Autosize; $result.LatestBootTime | FT -Autosize;
+        $Result.LoginLogoff | FT -Autosize;
         Pause;
       };
       "8" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
         $Result = Get-LoginLogoffDomain;
-        $Result.LatestBootEvents | FT -Autosize;
+        $Result.LoginLogoff | FT -Autosize;
         Pause;
       };	  
       "11" { "`n`n  You selected: Get-HotFixInstallDates for Locla Server`n"
-        $Result = Get-HotFixInstallDates;
+        $Result = Get-HotFixInstallDatesLocal;
         $Result.HotFixInstallDates | FT -Autosize;
         Pause;
       };
@@ -303,9 +300,9 @@ Function ToolboxMenu {
         Sleep 10;
       };
       "H" { "`n`n  You selected: Help / Information option `n"
-	  "  Help / Information will be updated later"
+      "  Help / Information will be updated later"
         Sleep 10;
-	  };
+      };
     }; # End Switch
     #Pause;
   } until (($selection -eq "q") -or ($selection -eq "0"));
