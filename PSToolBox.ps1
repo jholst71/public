@@ -34,10 +34,8 @@ Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Rest
 Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for multiple Domain servers
   Param(
     $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
-    #$fQueryComputerSearch = @("BORG19RDS*"),
-    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ("BORG19RDSCB01","BORG19RDSCB02","BORG19RDSGW01","BORG19RDSGW02"),
-    #$fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Search ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
     $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
@@ -76,7 +74,6 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     $Return.LatestBootEvents = $fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName;
     Return $Return;
 };
-
 Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
   Param(
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
@@ -86,15 +83,15 @@ Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
     #$fFileName = "$($env:USERPROFILE)\Desktop\Get-LatestLoginLogoff_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Default Variables
-    $fQueryComputers = (Get-QueryComputers -fQueryComputerSearch $fQueryComputerSearch -fQueryComputerExcludeList $fQueryComputerExcludeList); 
     $fEventLogStartTime = [DateTime]::Now.AddDays(-$($fLastXDays)).AddHours(-$($fLastXHours));
     $fUserProperty = @{n="User";e={(New-Object System.Security.Principal.SecurityIdentifier $_.ReplacementStrings[1]).Translate([System.Security.Principal.NTAccount])}}
     $fTypeProperty = @{n="Action";e={if($_.EventID -eq 7001) {"Logon"} elseif ($_.EventID -eq 7002){"Logoff"} else {"other"}}}
     $fTimeProperty = @{n="Time";e={$_.TimeGenerated}}
     $fMachineNameProperty = @{n="MachinenName";e={$_.MachineName}}
   ## Script
-      Write-Host "Querying Computer: $($ENV:Computername)"
-      $fResult = Get-EventLog System -Source Microsoft-Windows-Winlogon -after $fEventLogStartTime | select $fUserProperty,$fTypeProperty,$fTimeProperty,$fMachineNameProperty
+    Show-Title "Get latest Login / Logoff for Local Server - Events After: $($fEventLogStartTime)";
+    Write-Host "Querying Computer: $($ENV:Computername)"
+    $fResult = Get-EventLog System -Source Microsoft-Windows-Winlogon -after $fEventLogStartTime | select $fUserProperty,$fTypeProperty,$fTimeProperty,$fMachineNameProperty
   ## Output
     #$fResult | sort User, Time | FT -autosize;
   ## Exports
@@ -107,8 +104,8 @@ Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
 Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Log: Microsoft-Windows-Winlogon
   Param(
     $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
-    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Search ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fLastXDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
     $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"12" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } }),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
@@ -123,6 +120,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
     $fTimeProperty = @{n="Time";e={$_.TimeGenerated}}
     $fMachineNameProperty = @{n="MachinenName";e={$_.MachineName}}
   ## Script
+    Show-Title "Get latest Login / Logoff  for multiple Domain Servers - Events After: $($fEventLogStartTime)";
     $fResult = foreach ($fComputer in $fQueryComputers.name) { # Get Values like .Name, .DNSHostName
       Write-Host "Querying Computer: $($fComputer)"
       Get-EventLog System -Source Microsoft-Windows-Winlogon -ComputerName $fComputer -after $fEventLogStartTime | select $fUserProperty,$fTypeProperty,$fTimeProperty,$fMachineNameProperty
@@ -136,7 +134,6 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
     $Return.LoginLogoff = $fResult | sort User, Time;
     Return $Return;
 };
-
 Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
@@ -146,24 +143,24 @@ Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple D
     );
   ## Script
     Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates Local Server";
-        $fInstalledHotfixes = Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $fHotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
-        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$((Get-ComputerInfo).WindowsProductName)";
-        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike "127.0.0.1" }).IPAddress)";
-        $fInstalledHotfixes; 
+    $fInstalledHotfixes = Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $fHotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
+    $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$((Get-ComputerInfo).WindowsProductName)";
+    $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike "127.0.0.1" }).IPAddress)";
+    $fInstalledHotfixes; 
   ## Output
-    #$fResult | sort MachineName, TimeGenerated | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | FT -autosize;
+    #$fResult | sort MachineName, TimeGenerated | Select InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | FT -autosize;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort PSComputerName | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Select InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{}
-    $Return.HotFixInstallDates = $fResult | sort PSComputerName | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
+    $Return.fInstalledHotfixes = $fResult | Select InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
     Return $Return;
 };
 Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
     $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
-    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter ExcludeList ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Search ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
@@ -223,6 +220,7 @@ Function StartSCOMMaintenanceMode { ### Start SCOM Maintenance Mode
     $fComments = "SCOM MaintenanceMode started for $($SCOMMaintenanceModeDuration) minutes from $($env:Computername) by $($Env:USERNAME) at $(Get-Date)"
   );
   ## Script
+    Show-Title "Start SCOM Maintenance Mode at Local Server";
     Import-Module "C:\Program Files\Microsoft Monitoring Agent\Agent\MaintenanceMode.dll";
     try { Start-SCOMAgentMaintenanceMode -Reason "PlannedOther" -Duration $fDuration -Comment $fComments -Force Y;
       } catch { Start-SCOMAgentMaintenanceMode -Reason "PlannedOther" -Duration $fDuration -Comment $fComments;}
@@ -232,6 +230,10 @@ Function Show-Title {
   param ( [string]$Title );
     $host.UI.RawUI.WindowTitle = $Title;
 };
+Function Show-Help {
+  Write-Host "  Help / Information will be updated later";
+};
+
 Function Show-Menu {
   param (
     [string]$Title = "Progressive Toolbox"
@@ -245,11 +247,11 @@ Function Show-Menu {
   Write-Host "   6: Press '6'  for Get-LatestReboot for Domain Servers.";
   Write-Host "   7: Press '7'  for Get-LoginLogoff for Local Server.";
   Write-Host "   8: Press '8'  for Get-LoginLogoff for Domain Servers.";
-  Write-Host "  ":
+  Write-Host "  ";
   #Write-Host "  11: Press '11' for Get-HotFixInstallDates for Local Server.";
   Write-Host "  12: Press '12' for Get-HotFixInstallDates for Domain Servers.";
   #Write-Host "  99: Press '99' for this option.";
-  Write-Host "  ":
+  Write-Host "  ";
   Write-Host "   H: Press 'H'  for Toolbox Help / Information.";
   Write-Host "   Q: Press 'Q'  to quit.";
 };
@@ -285,7 +287,7 @@ Function ToolboxMenu {
         $Result.LoginLogoff | FT -Autosize;
         Pause;
       };	  
-      "11" { "`n`n  You selected: Get-HotFixInstallDates for Locla Server`n"
+      "11" { "`n`n  You selected: Get-HotFixInstallDates for Local Server`n"
         $Result = Get-HotFixInstallDatesLocal;
         $Result.HotFixInstallDates | FT -Autosize;
         Pause;
@@ -299,8 +301,8 @@ Function ToolboxMenu {
         Sleep 10;
       };
       "H" { "`n`n  You selected: Help / Information option `n"
-      "  Help / Information will be updated later"
-        Sleep 10;
+        Function Show-Help
+        Pause;
       };
     }; # End Switch
     #Pause;
