@@ -231,7 +231,7 @@ Function Show-Title {
     $host.UI.RawUI.WindowTitle = $Title;
 };
 Function Show-Help {
-  Show-Title "$($Title) Help & Information;
+  Show-Title "$($Title) Help & Information";
   Clear-Host;
   Write-Host "  Help & Information will be updated later";
 };
