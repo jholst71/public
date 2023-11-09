@@ -301,7 +301,7 @@ Function ToolboxMenu {
         Sleep 10;
       };
       "H" { "`n`n  You selected: Help / Information option `n"
-        Function Show-Help
+        Show-Help;
         Pause;
       };
     }; # End Switch
