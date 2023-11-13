@@ -1,12 +1,5 @@
 ### Progressive Toolbox, by John Holst, Progressive
 #
-Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names 
-  Param( $fQueryComputerSearch, $fQueryComputerExcludeList )
-  ## Script
-    $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
-    $fQueryComputers = $fQueryComputers | Sort Name;
-    Return $fQueryComputers;
-};
 Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for logged on server
   Param(
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
@@ -213,6 +206,67 @@ Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple 
     $Return.HotFixInstallDates = $fResult | sort PSComputerName | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
     Return $Return;
 };
+Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
+  Param(
+    $fCertSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Certificate SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
+	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\Get-Expired_Certificates_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\Get-Expired_Certificates_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+  );
+  ## Script
+    Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
+	$fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
+    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter
+  ## Output
+    #$fResult | sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | FT -autosize;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.ExpiredCertificates = $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject;
+    Return $Return;
+};
+Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
+  Param(
+    $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
+    $fCertSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Certificate SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fQueryComputerExcludeList = ("*" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
+    $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
+    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fJobNamePrefix = "RegQuery_",
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
+  );
+  ## Script
+    Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on multiple Domain Servers";
+    $fQueryComputers = (Get-QueryComputers -fQueryComputerSearch $fQueryComputerSearch -fQueryComputerExcludeList $fQueryComputerExcludeList); # Get Values like .Name, .DNSHostName
+    $fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
+    $fResult = Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
+      Write-Host "Querying Server: $($fQueryComputer)";
+      $fBlock01 = { Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject,FriendlyName,NotAfter};
+      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
+        $fLocalHostResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter;
+      } ELSE {
+        $JobResult = Invoke-Command -scriptblock $fBlock01 -ComputerName $fQueryComputer -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
+      };
+    };
+    Write-Host "  Waiting for jobs to complete... `n";
+    DO { $fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
+      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }
+    While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
+    $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
+    $fResult = $fResult + $fLocalHostResult;
+  ## Output
+    #$fResult | sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | FT -autosize;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
+    Return $Return;
+};
 Function StartSCOMMaintenanceMode { ### Start SCOM Maintenance Mode
   param( 
     $fDuration = ("30" | %{ If($Entry = Read-Host "  Enter MaintenanceMode Duration ( Default: $_ )"){$Entry} Else {$_} }),
@@ -224,6 +278,14 @@ Function StartSCOMMaintenanceMode { ### Start SCOM Maintenance Mode
     try { Start-SCOMAgentMaintenanceMode -Reason "PlannedOther" -Duration $fDuration -Comment $fComments -Force Y;
       } catch { Start-SCOMAgentMaintenanceMode -Reason "PlannedOther" -Duration $fDuration -Comment $fComments;}
     Write-Host "Request: Start SCOM Maintenance Mode for $($fDuration) minutes";
+};
+## Shared Functions
+Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names 
+  Param( $fQueryComputerSearch, $fQueryComputerExcludeList )
+  ## Script
+    $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
+    $fQueryComputers = $fQueryComputers | Sort Name;
+    Return $fQueryComputers;
 };
 Function Show-Title {
   param ( [string]$Title );
@@ -250,6 +312,8 @@ Function Show-Menu {
   Write-Host "  ";
   Write-Host "  11: Press '11' for Get-HotFixInstallDates for Local Server.";
   Write-Host "  12: Press '12' for Get-HotFixInstallDates for Domain Servers.";
+  Write-Host "  13: Press '13' for Get-ExpiredCertificates for Local Server.";
+  Write-Host "  14: Press '14' for Get-ExpiredCertificates for Domain Servers.";
   #Write-Host "  99: Press '99' for this option.";
   Write-Host "  ";
   Write-Host "   H: Press 'H'  for Toolbox Help / Information.";
@@ -295,6 +359,16 @@ Function ToolboxMenu {
       "12" { "`n`n  You selected: Get-HotFixInstallDates for Domain Servers`n"
         $Result = Get-HotFixInstallDatesDomain;
         $Result.HotFixInstallDates | FT -Autosize;
+        Pause;
+      };
+      "13" { "`n`n  You selected: Get-ExpiredCertificates for Local Server`n"
+        $Result = Get-ExpiredCertificatesLocal;
+        $Result.ExpiredCertificates | FT -Autosize;
+        Pause;
+      };
+      "14" { "`n`n  You selected: Get-ExpiredCertificates for Domain Servers`n"
+        $Result = Get-ExpiredCertificatesDomain;
+        $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
       "99" { "`n`n  You selected: Test option #99`n"
