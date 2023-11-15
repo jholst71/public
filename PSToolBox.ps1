@@ -132,8 +132,8 @@ Function Get-InavtiveADUsers {## Get inactive AD Users / Latest Logon more than 
     $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
     $fDaysInactive = ("90" | %{ If($Entry = Read-Host "  Enter number of inactive days (Default: $_ Days)"){$Entry} Else {$_} }),
 	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Users_not_active_last_$($DaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
-    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Users_not_active_last_$($DaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Inactive_ADUsers_last_$($fDaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Inactive_ADUsers_last_$($fDaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
     Show-Title "Get AD Users Latest Logon / inactive more than $($fDaysInactive) days";
