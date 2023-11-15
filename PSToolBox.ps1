@@ -137,7 +137,7 @@ Function Get-InavtiveADUsers {## Get inactive AD Users / Latest Logon more than 
   );
   ## Script
     Show-Title "Get AD Users Latest Logon / inactive more than $($fDaysInactive) days";
-	$fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fExpiresBeforeDays));
+	$fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fDaysInactive));
     $fResult = Get-Aduser -Filter {(LastLogonTimeStamp -lt $fDaysInactiveTimestamp) -or (LastLogonTimeStamp -notlike "*")} -Properties *  | Sort-Object -Property samaccountname | Select CN,DisplayName,Samaccountname,@{n="LastLogonDate";e={[datetime]::FromFileTime($_.lastLogonTimestamp)}},Enabled,PasswordNeverExpires,@{Name='PwdLastSet';Expression={[DateTime]::FromFileTime($_.PwdLastSet)}},Description;
   ## Output
     #$fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description;
