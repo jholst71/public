@@ -188,7 +188,7 @@ Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple 
       IF ($fQueryComputer.Name -eq $Env:COMPUTERNAME) {
         $fInstalledHotfixes = Get-Hotfix | sort InstalledOn -Descending -Unique -ErrorAction SilentlyContinue | Select -First $fHotfixInstallDates | Select PSComputerName, Description, HotFixID, InstalledBy, InstalledOn;
         $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value "$((Get-ComputerInfo).WindowsProductName)";
-        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike "127.0.0.1" }).IPAddress)";
+        $fInstalledHotfixes | Add-Member -MemberType NoteProperty -Name "IPv4Address" -Value "$((Get-NetIPAddress -AddressFamily IPv4 | ? {$_.IPAddress -notlike '127.0.0.1' }).IPAddress)";
         $fInstalledHotfixes; 
       } Else {
         try {
