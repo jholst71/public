@@ -319,7 +319,7 @@ Function Show-Help {
 };
 Function Show-Menu {
   param (
-    [string]$Title = "Progressive Toolbox"
+    [string]$Title = "PSToolbox"
   );
   Show-Title $Title;
   Clear-Host;
