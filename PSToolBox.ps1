@@ -370,6 +370,7 @@ Function ToolboxMenu {
       "5" { "`n`n  You selected: Get inactive AD Users / last logon more than eg 90 days`n"
         $Result = Get-InavtiveADUsers;
         $Result.InavtiveADUsers | FT -Autosize;
+        Pause;
       };
       "6" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
         
