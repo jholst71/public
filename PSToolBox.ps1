@@ -1,4 +1,4 @@
-### Progressive Toolbox, by John Holst, Progressive
+### PSToolbox, by John Holst, itm8
 #
 Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for logged on server
   Param(
