@@ -127,6 +127,27 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
     $Return.LoginLogoff = $fResult | sort User, Time;
     Return $Return;
 };
+Function Get-InavtiveADUsers {## Get inactive AD Users / Latest Logon more than eg 90 days
+  Param(
+    $fCustomerName = ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} }),
+    $fDaysInactive = ("90" | %{ If($Entry = Read-Host "  Enter number of inactive days (Default: $_ Days)"){$Entry} Else {$_} }),
+	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)_Users_not_active_last_$($DaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
+    #$fFileName = "$($env:USERPROFILE)\Desktop\$($fCustomerName)_Users_not_active_last_$($DaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
+  );
+  ## Script
+    Show-Title "Get AD Users Latest Logon / inactive more than $($fDaysInactive) days";
+	$fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fExpiresBeforeDays));
+    $fResult = Get-Aduser -Filter {(LastLogonTimeStamp -lt $fDaysInactiveTimestamp) -or (LastLogonTimeStamp -notlike "*")} -Properties *  | Sort-Object -Property samaccountname | Select CN,DisplayName,Samaccountname,@{n="LastLogonDate";e={[datetime]::FromFileTime($_.lastLogonTimestamp)}},Enabled,PasswordNeverExpires,@{Name='PwdLastSet';Expression={[DateTime]::FromFileTime($_.PwdLastSet)}},Description;
+  ## Output
+    #$fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.InavtiveADUsers = $fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description;
+    Return $Return;
+};
 Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
@@ -303,54 +324,56 @@ Function Show-Menu {
   Show-Title $Title;
   Clear-Host;
   Write-Host "`n  ================ $Title ================`n";
-  #Write-Host "   1: Press '1'  for Start SCOM MaintenanceMode for Local Server.";
-  #Write-Host "   2: Press '2'  for Start SCOM MaintenanceMode for Local Server (Script).";
-  Write-Host "   5: Press '5'  for Get-LatestReboot for Local Server.";
-  Write-Host "   6: Press '6'  for Get-LatestReboot for Domain Servers.";
-  Write-Host "   7: Press '7'  for Get-LoginLogoff for Local Server.";
-  Write-Host "   8: Press '8'  for Get-LoginLogoff for Domain Servers.";
+  Write-Host "  Press '1'  for Get-LatestReboot for Local Server.";
+  Write-Host "  Press '2'  for Get-LatestReboot for Domain Servers.";
+  Write-Host "  Press '3'  for Get-LoginLogoff for Local Server.";
+  Write-Host "  Press '4'  for Get-LoginLogoff for Domain Servers.";
+  Write-Host "  Press '5'  for Get inactive AD Users / last logon more than eg 90 days.";
+  #Write-Host "  Press '6'  for Start SCOM MaintenanceMode for Local Server (Script).";
+  Write-Host "  "
+  Write-Host "  Press '11' for Get-HotFixInstallDates for Local Server.";
+  Write-Host "  Press '12' for Get-HotFixInstallDates for Domain Servers.";
+  Write-Host "  Press '13' for Get-ExpiredCertificates for Local Server.";
+  Write-Host "  Press '14' for Get-ExpiredCertificates for Domain Servers.";
+  #Write-Host "  Press '91'  for Start SCOM MaintenanceMode for Local Server.";
+  #Write-Host "  Press '92'  for Start SCOM MaintenanceMode for Local Server (Script).";
+  #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
-  Write-Host "  11: Press '11' for Get-HotFixInstallDates for Local Server.";
-  Write-Host "  12: Press '12' for Get-HotFixInstallDates for Domain Servers.";
-  Write-Host "  13: Press '13' for Get-ExpiredCertificates for Local Server.";
-  Write-Host "  14: Press '14' for Get-ExpiredCertificates for Domain Servers.";
-  #Write-Host "  99: Press '99' for this option.";
-  Write-Host "  ";
-  Write-Host "   H: Press 'H'  for Toolbox Help / Information.";
-  Write-Host "   Q: Press 'Q'  to quit.";
+  Write-Host "   Press 'H'  for Toolbox Help / Information.";
+  Write-Host "   Press 'Q'  to quit.";
 };
 Function ToolboxMenu {
   do {
     Show-Menu
     $selection = Read-Host "`n  Please make a selection"
     switch ($selection){
-      "1" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
-        StartSCOMMaintenanceMode;
-        Sleep 10;
-      };
-      "2" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
-        $GitHubRawLink = "https://raw.githubusercontent.com/jholst71/public/main/Start_SCOM_MaintenanceMode.ps1"; IEX ((New-Object System.Net.WebClient).DownloadString($GitHubRawLink));
-      };
-      "5" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
+      "1" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
         $Result = Get-LatestRebootLocal;
         $Result.LatestBootEventsExtended | FL; $result.LatestBootEvents | FT -Autosize; $result.LatestBootTime | FT -Autosize;
         Pause;
       };
-      "6" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
+      "2" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
         $Result = Get-LatestRebootDomain;
         $Result.LatestBootEvents | FT -Autosize;
         Pause;
       };
-      "7" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
+      "3" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
         $Result = Get-LoginLogoffLocal;
         $Result.LoginLogoff | FT -Autosize;
         Pause;
       };
-      "8" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
+      "4" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
         $Result = Get-LoginLogoffDomain;
         $Result.LoginLogoff | FT -Autosize;
         Pause;
       };	  
+      "5" { "`n`n  You selected: Get inactive AD Users / last logon more than eg 90 days`n"
+        $Result = Get-InavtiveADUsers;
+        $Result.InavtiveADUsers | FT -Autosize;
+      };
+      "6" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
+        
+      };
       "11" { "`n`n  You selected: Get-HotFixInstallDates for Local Server`n"
         $Result = Get-HotFixInstallDatesLocal;
         $Result.HotFixInstallDates | FT -Autosize;
@@ -370,6 +393,13 @@ Function ToolboxMenu {
         $Result = Get-ExpiredCertificatesDomain;
         $Result.ExpiredCertificates | FT -Autosize;
         Pause;
+      };
+      "91" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
+        StartSCOMMaintenanceMode;
+        Sleep 10;
+      };
+      "92" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
+        $GitHubRawLink = "https://raw.githubusercontent.com/jholst71/public/main/Start_SCOM_MaintenanceMode.ps1"; IEX ((New-Object System.Net.WebClient).DownloadString($GitHubRawLink));
       };
       "99" { "`n`n  You selected: Test option #99`n"
         Sleep 10;
