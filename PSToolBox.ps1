@@ -29,7 +29,7 @@ Function Get-FilePath {
 Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for logged on server
   Param(
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-	$fEventLogStartTime = Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12",
+	$fEventLogStartTime = (Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fFileName = "$(Get-FilePath)\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
@@ -51,7 +51,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
-    $fEventLogStartTime = Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12",
+    $fEventLogStartTime = (Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
     $fExportExtended = ("Yes" | %{ If($Entry = Read-Host "  Export Standard & Extended(message included) result to file - ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
@@ -87,7 +87,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
 };
 Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
   Param(
-$fEventLogStartTime = Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12",
+$fEventLogStartTime = (Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fFileName = "$(Get-FilePath)\Get-LatestLoginLogoff_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
@@ -113,7 +113,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
-    $fEventLogStartTime = Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12",
+    $fEventLogStartTime = (Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-LatestLoginLogoff_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
