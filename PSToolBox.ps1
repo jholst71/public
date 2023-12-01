@@ -462,7 +462,6 @@ Function ToolboxMenu {
       "15" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
         $Result = Get-FSLogixErrors;
         $Result.FSLogixErrors | FT -Autosize;
-        Write-Host "`n  Number of FSLogix ErrorCodes listed: $($Result.FSLogixErrors.count)`n"
         Pause;
       };      "99" { "`n`n  You selected: Test option #99`n"
         Sleep 10;
