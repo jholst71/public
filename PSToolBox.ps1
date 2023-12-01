@@ -2,18 +2,20 @@
 #
 ### Parameter Functions
 Function Get-CustomerName { ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} })};
-Function Get-EventLogStartTime {
+Function Get-LogStartTime {
+  # Add this line to Params: $fEventLogStartTime = (Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
   Param( $DefaultDays, $DefaultHours,
-    $fLastXDays = ("$($DefaultDays)" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
+	$fLastXDays = ("$($DefaultDays)" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
     $fLastXHours = ( %{If ( $fLastXDays -gt 0) {0} Else {"$($DefaultHours)" | %{ If($Entry = Read-Host "  Enter number of hours in searchscope (Default: $_ Hours)"){$Entry} Else {$_} } } })
 	);
   ## Script
     Return [DateTime]::Now.AddDays(-$($fLastXDays)).AddHours(-$($fLastXHours));
 };
-Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names 
+Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
+  # Add this line to Params: $fQueryComputers = $(Get-QueryComputers),
   Param(
     $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ("" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} })
+    $fQueryComputerExcludeList = ($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma").Split(",")).Trim()))
 	);
   ## Script
     $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
@@ -21,6 +23,7 @@ Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
     Return $fQueryComputers;
 };
 Function Get-FilePath {
+  # Add this line to Params: $fFileName = "$(Get-FilePath)\$($fCustomerName)_<FILENAMETEXT>_$(get-date -f yyyy-MM-dd_HH.mm)"
   Return "$([Environment]::GetFolderPath("Desktop"))"; # Example \$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
   #Return "$($env:USERPROFILE)\Desktop"; # Example \$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
 };
@@ -29,7 +32,7 @@ Function Get-FilePath {
 Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Restart / Shutdown for logged on server
   Param(
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fEventLogStartTime = $(Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
+	$fEventLogStartTime = (Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fFileName = "$(Get-FilePath)\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
@@ -51,7 +54,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
-    $fEventLogStartTime = $(Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
+    $fEventLogStartTime = $(Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
     $fExportExtended = ("Yes" | %{ If($Entry = Read-Host "  Export Standard & Extended(message included) result to file - ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
@@ -87,7 +90,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
 };
 Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
   Param(
-    $fEventLogStartTime = $(Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
+$fEventLogStartTime = $(Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fFileName = "$(Get-FilePath)\Get-LatestLoginLogoff_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
@@ -113,7 +116,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
-    $fEventLogStartTime = $(Get-EventLogStartTime -DefaultDays "7" -DefaultHours "12"),
+    $fEventLogStartTime = $(Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-LatestLoginLogoff_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
@@ -141,12 +144,12 @@ Function Get-InavtiveADUsers {## Get inactive AD Users / Latest Logon more than 
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fDaysInactive = ("90" | %{ If($Entry = Read-Host "  Enter number of inactive days (Default: $_ Days)"){$Entry} Else {$_} }),
-    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fFileName = "$(Get-FilePath)\$($fCustomerName)_Inactive_ADUsers_last_$($fDaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
     Show-Title "Get AD Users Latest Logon / inactive more than $($fDaysInactive) days";
-    $fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fDaysInactive));
+	$fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fDaysInactive));
     $fResult = Get-Aduser -Filter {(LastLogonTimeStamp -lt $fDaysInactiveTimestamp) -or (LastLogonTimeStamp -notlike "*")} -Properties *  | Sort-Object -Property samaccountname | Select CN,DisplayName,Samaccountname,@{n="LastLogonDate";e={[datetime]::FromFileTime($_.lastLogonTimestamp)}},Enabled,PasswordNeverExpires,@{Name='PwdLastSet';Expression={[DateTime]::FromFileTime($_.PwdLastSet)}},Description;
   ## Output
     #$fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description;
@@ -236,12 +239,12 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
   Param(
     $fCertSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Certificate SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
-    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fFileName = "$(Get-FilePath)\Get-Expired_Certificates_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
     Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
-    $fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
+	$fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
     $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter
   ## Output
     #$fResult | sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | FT -autosize;
@@ -256,8 +259,7 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fCertSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Certificate SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = $(Get-QueryComputerExcludeList),
+    $fQueryComputers = $(Get-QueryComputers),
     $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fJobNamePrefix = "RegQuery_",
@@ -290,6 +292,86 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
     Return $Return;
 };
+Function Get-FSLogixErrors {## Get FSLogix Errors - need an AD Server or Server with RSAT
+  Param(
+    $fCustomerName = $(Get-CustomerName),
+    $fQueryComputers = $(Get-QueryComputers),
+    $fLogDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
+    $fFileName = "$(Get-FilePath)\$($fCustomerName)_FSLogix Errors_$(get-date -f yyyy-MM-dd_HH.mm)",
+    $fErrorCodes1 = @("00000079", "0000001f", "00000020"),
+    $fErrorCodes2 = @("00000079", "0000001f"),
+    $fErrorCodeList = "  Internal Error Code Description:
+  00000005 Access is denied
+  00000020 Operation 'OpenVirtualDisk' failed / Failed to open virtual disk / The process cannot access the file because it is being used by another process.
+  00000091 The directory is not empty
+  00000079 Failed to attach VHD / LoadProfile failed / AttachVirtualDisk error for user
+  0000001f Error (A device attached to the system is not functioning.)
+  00000091 Error removing directory (The directory is not empty.)
+  000003f8 Restoring registry key (An I/O operation initiated by the registry failed unrecoverable...)
+  0000078f FindFile failed for path: / LoadProfile failed.
+  00000490 Failed to remove RECYCLE.BIN redirect (Element not found.)
+  00001771 Failed to restore credentials. Unable to decrypt value from BlobDpApi attribute (The specified file could not be decrypted.)
+  0000a418 Unable to get the supported size or compact the disk, Message: Cannot shrink a partition containing a volume with errors
+  80070003 Failed to save installed AppxPackages (The system cannot find the path specified.)
+  80070490 Error removing Rule (Element not found)"
+  );
+  ## Script
+    Show-Title "Get FSLogix Errors for past $($fLogDays) days";
+    $fExportAllErrors = "$FALSE" ; # Select "$TRUE" or "$FALSE"
+    ## ErrorCode Selection
+      Clear-Host;
+      Write-Host "`n  ================ Select FSLogix ErrorCodes ================`n";
+      Write-Host "  Press '1'  for FSLogix ErrorCodes $($fErrorCodes1).";
+      Write-Host "  Press '2'  for FSLogix ErrorCodes $($fErrorCodes2).";
+      Write-Host "  Press 'M'  for entering FSLogix ErrorCodes manually.";
+      Write-Host "  Press 'A'  for All FSLogix ErrorCodes.";
+    $ErrorCodeSelection = Read-Host "`n  Please make a selection"
+    switch ($ErrorCodeSelection){
+      "1" {$fErrorCodes = $fErrorCodes1;} # @("ERROR:", "WARN:") @("00000079", "0000001f", "00000020")
+      "2" {$fErrorCodes = $fErrorCodes2;} # @("ERROR:", "WARN:") @("00000079", "0000001f");} 
+      "m" {$fErrorCodes = ($Entry = @(((Read-Host "  Enter FXLogix ErrorCode(s), to search for, separated by comma").Split(",")).Trim()));}
+      "a" {$fExportAllErrors = "$TRUE"} ; # Select "$TRUE" or "$FALSE"
+    };
+    $fLogText = Foreach ( $fQueryComputer in $fQueryComputers.name) {
+      Write-Host "Querying Computer: $($fQueryComputer)";
+      Foreach ($fProfilePath in (gi \\$fQueryComputer\C$\ProgramData\FSLogix\Logs\Profile\Profile-*.log)[-$($fLogDays)..-1]) {
+        Get-Content -Path $fProfilePath | Where-Object {($_ -like "*ERROR:*") -or ($_ -like "*WARN:*")} |Foreach  {
+        New-Object psobject -Property @{
+          Servername = $fQueryComputer
+          Date = ($fProfilePath | Select -ExpandProperty CreationTime) | Get-Date -f "yyyy-MM-dd"
+          Time = $_.split("]")[0].trim("[")
+          tid = $_.split("]")[1].trim("[")
+          Error = $_.split("]")[2].trim("[")
+          LogText = $_.split("]")[3].trim("  ")
+      }}};
+      Foreach ($fProfilePath in (gi \\$fQueryComputer\C$\ProgramData\FSLogix\Logs\ODFC\ODFC-*.log)[-$($fLogDays)..-1]) {
+        Get-Content -Path $fProfilePath | Where-Object {($_ -like "*ERROR:*") -or ($_ -like "*WARN:*")} |Foreach  {
+        New-Object psobject -Property @{
+          Servername = $fQueryComputer
+          Date = ($fProfilePath | Select -ExpandProperty CreationTime) | Get-Date -f "yyyy-MM-dd"
+          Time = $_.split("]")[0].trim("[")
+          tid = $_.split("]")[1].trim("[")
+          Error = $_.split("]")[2].trim("[")
+          LogText = $_.split("]")[3].trim("  ")
+      }}};
+    };
+    $fResult = Foreach ($fErrorCode in $fErrorCodes) {$fLogText | Where-Object { $_ -like "*$($fErrorCode)*" }};
+  ## Output
+    #$fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description;
+    #If ($fExportAllErrors -ne $true) { $fResult | sort Servername, Date, Time | FT Servername, Date, Time, Error, tid, LogText; Write-Host "   Number of errorcodes listed: $($fResult.count)`n"; };
+    If ($fExportAllErrors -ne $true) { Write-Host "`n  Number of errorcodes listed: $($fResult.count)`n"; } else { Write-Host "`n  Number of errorcodes listed: $($fLogText.count)`n" };
+  ## Exports
+    #If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If ($fExportAllErrors -ne $true) { 
+      $fResult | sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation;
+	} else {
+      $fLogText | sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText | Export-CSV "$($fFileName)_All_Errors.csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation;
+	};
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.FSLogixErrors = $fResult | Sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText;
+    Return $Return;
+};
 ## Shared Functions
 Function Show-Title {
   param ( [string]$Title );
@@ -318,6 +400,7 @@ Function Show-Menu {
   Write-Host "  Press '12' for Get-HotFixInstallDates for Domain Servers.";
   Write-Host "  Press '13' for Get-ExpiredCertificates for Local Server.";
   Write-Host "  Press '14' for Get-ExpiredCertificates for Domain Servers.";
+  Write-Host "  Press '15' for Get-FSLogixErrors for Domain Servers.";
   #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
   Write-Host "   Press 'H'  for Toolbox Help / Information.";
@@ -376,7 +459,11 @@ Function ToolboxMenu {
         $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
-      "99" { "`n`n  You selected: Test option #99`n"
+      "15" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
+        $Result = Get-FSLogixErrors;
+        $Result.FSLogixErrors | FT -Autosize;
+        Pause;
+      };      "99" { "`n`n  You selected: Test option #99`n"
         Sleep 10;
       };
       "H" { "`n`n  You selected: Help / Information option `n"
