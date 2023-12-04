@@ -337,7 +337,7 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
     };
     Write-Host "  Waiting for jobs to complete... `n";
     DO { IF ((Get-Job -Name "$($fJobNamePrefix)*").count -ge 1) {$fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
-      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; } };
+      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }; }
     While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
     $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
     $fResult = $fResult + $fLocalHostResult;
