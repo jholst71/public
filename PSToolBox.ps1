@@ -316,10 +316,10 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
           InternetTimeZone = If ($fInternetTime -ne "Not Available") {$fInternetTime.timeZone} Else {$fInternetTime};
         });
       };
-      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
-        $fInternetTime = Try {(Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen")} Catch {"Not Available"}
-        $fLocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
-        $fLocalHostResult = New-Object psobject -Property ([ordered]@{
+      $fLocalBlock01 = {
+        $fInternetTime = Try {(Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen")} Catch {"Not Available"};
+        $fLocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss");
+        New-Object psobject -Property ([ordered]@{
           PSComputerName = $Env:COMPUTERNAME;
           InternetTime = If ($fInternetTime -ne "Not Available") {$fInternetTime.dateTime.replace("T"," ").split(".")[0]} Else {$fInternetTime};
           LocalTime = $fLocalTime;
@@ -328,6 +328,9 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
           LocalTimeZone = Try {Get-TimeZone} Catch {(Get-WMIObject -Class Win32_TimeZone).Caption};
           InternetTimeZone = If ($fInternetTime -ne "Not Available") {$fInternetTime.timeZone} Else {$fInternetTime};
         });
+      };
+      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
+        $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01 
       } ELSE {
         $JobResult = Invoke-Command -scriptblock $fBlock01 -ComputerName $fQueryComputer -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
       };
