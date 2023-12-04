@@ -15,7 +15,7 @@ Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
   # Add this line to Params: $fQueryComputers = $(Get-QueryComputers),
   Param(
     $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma").Split(",")).Trim()))
+    $fQueryComputerExcludeList = ($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ").Split(",")).Trim()))
 	);
   ## Script
     $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
@@ -292,7 +292,57 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
     Return $Return;
 };
-Function Get-FSLogixErrors {## Get FSLogix Errors - need an AD Server or Server with RSAT
+Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server or Server with RSAT
+  Param(
+    $fCustomerName = $(Get-CustomerName),
+    $fQueryComputers = $(Get-QueryComputers),
+    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fJobNamePrefix = "RegQuery_",
+    $fFileName = "$(Get-FilePath)\$($fCustomerName)_DateTimeStatus_$(get-date -f yyyy-MM-dd_HH.mm)"
+	);
+  ## Script
+    Show-Title "Get Date and Time status from Domain Servers";
+    Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
+      Write-Host "Querying Server: $($fQueryComputer)";
+      $fBlock01 = {New-Object psobject -Property ([ordered]@{
+        InternetTime = ((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").dateTime.replace("T"," ").split(".")[0])
+          LocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
+	      LocalNTPServer = (w32tm /query /source)
+	      LocalCulture = Get-Culture
+          LocalTimeZone = (Get-TimeZone)
+	      InternetTimeZone = $((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").timeZone)
+	    });
+	  };
+      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
+        $fLocalHostResult = New-Object psobject -Property ([ordered]@{
+          PSComputerName = $Env:COMPUTERNAME
+          InternetTime = ((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").dateTime.replace("T"," ").split(".")[0])
+          LocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
+	      LocalNTPServer = (w32tm /query /source)
+	      LocalCulture = Get-Culture
+          LocalTimeZone = (Get-TimeZone)
+	      InternetTimeZone = $((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").timeZone)
+		});
+      } ELSE {
+        $JobResult = Invoke-Command -scriptblock $fBlock01 -ComputerName $fQueryComputer -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
+      };
+    };
+    Write-Host "  Waiting for jobs to complete... `n";
+    DO { $fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
+      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }
+    While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
+    $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
+    $fResult = $fResult + $fLocalHostResult;
+  ## Output
+    #$fResult | Sort PSComputerName | Select PSComputerName, InternetTime, LocalTime, LocalNTPServer, LocalCulture, LocalTimeZone, InternetTimeZone;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort PSComputerName | Select PSComputerName, InternetTime, LocalTime, LocalNTPServer, LocalCulture, LocalTimeZone, InternetTimeZone | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.DateTimeStatus = $fResult | Sort PSComputerName | Select PSComputerName, InternetTime, LocalTime, LocalNTPServer, LocalCulture, LocalTimeZone, InternetTimeZone;
+    Return $Return;
+};
+Function Get-FSLogixErrorsDomain {## Get FSLogix Errors - need an AD Server or Server with RSAT
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
@@ -401,6 +451,7 @@ Function Show-Menu {
   Write-Host "  Press '13' for Get-ExpiredCertificates for Local Server.";
   Write-Host "  Press '14' for Get-ExpiredCertificates for Domain Servers.";
   Write-Host "  Press '15' for Get-FSLogixErrors for Domain Servers.";
+  Write-Host "  Press '16' for Get-FSLogixErrors for Domain Servers.";
   #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
   Write-Host "   Press 'H'  for Toolbox Help / Information.";
@@ -459,8 +510,12 @@ Function ToolboxMenu {
         $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
-      "15" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
-        $Result = Get-FSLogixErrors;
+      "15" { "`n`n  You selected: Get-DateTimeStatus for Domain Servers`n"
+        $Result = Get-DateTimeStatusDomain;
+        $Result.DateTimeStatus | FT -Autosize;
+        Pause;
+      "16" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
+        $Result = Get-FSLogixErrorsDomain;
         $Result.FSLogixErrors | FT -Autosize;
         Pause;
       };      "99" { "`n`n  You selected: Test option #99`n"
