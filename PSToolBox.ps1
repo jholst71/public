@@ -73,9 +73,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
       };
     };
     Write-Host "  Waiting for jobs to complete... `n";
-    DO { $fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
-      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }
-    While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
+    Show-JobStatus $fJobNamePrefix;
     $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
     $fResult = $fResult + $fLocalHostResult;
   ## Output
@@ -278,9 +276,7 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
       };
     };
     Write-Host "  Waiting for jobs to complete... `n";
-    DO { $fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
-      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }
-    While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
+    Show-JobStatus $fJobNamePrefix;
     $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
     $fResult = $fResult + $fLocalHostResult;
   ## Output
@@ -336,10 +332,8 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
       };
     };
     Write-Host "  Waiting for jobs to complete... `n";
-    DO { IF ((Get-Job -Name "$($fJobNamePrefix)*").count -ge 1) {$fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
-      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }; }
-    While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
-    $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
+	Show-JobStatus $fJobNamePrefix;
+	$fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
     $fResult = $fResult + $fLocalHostResult;
   ## Output
     #$fResult | Sort PSComputerName | Select PSComputerName, InternetTime, LocalTime, LocalNTPServer, LocalCulture, LocalTimeZone, InternetTimeZone;
@@ -434,6 +428,11 @@ Function Get-FSLogixErrorsDomain {## Get FSLogix Errors - need an AD Server or S
 Function Show-Title {
   param ( [string]$Title );
     $host.UI.RawUI.WindowTitle = $Title;
+};
+Function Show-JobStatus { Param ($fJobNamePrefix)
+    DO { IF ((Get-Job -Name "$($fJobNamePrefix)*").count -ge 1) {$fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
+      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }; }
+    While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
 };
 Function Show-Help {
   Show-Title "$($Title) Help / Information";
