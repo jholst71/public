@@ -450,7 +450,7 @@ Function Show-Menu {
   Write-Host "  Press '12' for Get-HotFixInstallDates for Domain Servers.";
   Write-Host "  Press '13' for Get-ExpiredCertificates for Local Server.";
   Write-Host "  Press '14' for Get-ExpiredCertificates for Domain Servers.";
-  Write-Host "  Press '15' for Get-FSLogixErrors for Domain Servers.";
+  Write-Host "  Press '15' for Get-DateTimeStatus for Domain Servers.";
   Write-Host "  Press '16' for Get-FSLogixErrors for Domain Servers.";
   #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
@@ -514,11 +514,13 @@ Function ToolboxMenu {
         $Result = Get-DateTimeStatusDomain;
         $Result.DateTimeStatus | FT -Autosize;
         Pause;
+      };
       "16" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
         $Result = Get-FSLogixErrorsDomain;
         $Result.FSLogixErrors | FT -Autosize;
         Pause;
-      };      "99" { "`n`n  You selected: Test option #99`n"
+      };
+      "99" { "`n`n  You selected: Test option #99`n"
         Sleep 10;
       };
       "H" { "`n`n  You selected: Help / Information option `n"
