@@ -58,7 +58,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
     $fExportExtended = ("Yes" | %{ If($Entry = Read-Host "  Export Standard & Extended(message included) result to file - ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fJobNamePrefix = "RegQuery_",
+    $fJobNamePrefix = "LatestReboot_",
     $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-LatestReboot_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
@@ -66,8 +66,9 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
       $fBlock01 = {Get-EventLog -LogName System -After $Using:FEventLogStartTime | Where-Object {($_.EventID -eq 1074) -or ($_.EventID -eq 6008) -or ($_.EventID -eq 41) } };
+      $fLocalBlock01 = {Get-EventLog -LogName System -After $fEventLogStartTime | Where-Object {($_.EventID -eq 1074) -or ($_.EventID -eq 6008) -or ($_.EventID -eq 41) }};
       IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
-        $fLocalHostResult = Get-EventLog -LogName System -After $fEventLogStartTime | Where-Object {($_.EventID -eq 1074) -or ($_.EventID -eq 6008) -or ($_.EventID -eq 41) };
+        $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01;
       } ELSE {
         $JobResult = Invoke-Command -scriptblock $fBlock01 -ComputerName $fQueryComputer -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
       };
@@ -260,7 +261,7 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fQueryComputers = $(Get-QueryComputers),
     $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fJobNamePrefix = "RegQuery_",
+    $fJobNamePrefix = "ExpiredCertificates_",
     $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
   );
   ## Script
@@ -268,9 +269,10 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
     $fResult = Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
-      $fBlock01 = { Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject,FriendlyName,NotAfter};
+      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject,FriendlyName,NotAfter};
+      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter;};
       IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
-        $fLocalHostResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter;
+        $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01;
       } ELSE {
         $JobResult = Invoke-Command -scriptblock $fBlock01 -ComputerName $fQueryComputer -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
       };
@@ -293,7 +295,7 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fJobNamePrefix = "RegQuery_",
+    $fJobNamePrefix = "DateTimeStatus_",
     $fFileName = "$(Get-FilePath)\$($fCustomerName)_DateTimeStatus_$(get-date -f yyyy-MM-dd_HH.mm)"
 	);
   ## Script
@@ -470,61 +472,50 @@ Function ToolboxMenu {
     $selection = Read-Host "`n  Please make a selection"
     switch ($selection){
       "1" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
-        $Result = Get-LatestRebootLocal;
-        $Result.LatestBootEventsExtended | FL; $result.LatestBootEvents | FT -Autosize; $result.LatestBootTime | FT -Autosize;
+        $Result = Get-LatestRebootLocal; $Result.LatestBootEventsExtended | FL; $result.LatestBootEvents | FT -Autosize; $result.LatestBootTime | FT -Autosize;
         Pause;
       };
       "2" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
-        $Result = Get-LatestRebootDomain;
-        $Result.LatestBootEvents | FT -Autosize;
+        $Result = Get-LatestRebootDomain; $Result.LatestBootEvents | FT -Autosize;
         Pause;
       };
       "3" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
-        $Result = Get-LoginLogoffLocal;
-        $Result.LoginLogoff | FT -Autosize;
+        $Result = Get-LoginLogoffLocal; $Result.LoginLogoff | FT -Autosize;
         Pause;
       };
       "4" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
-        $Result = Get-LoginLogoffDomain;
-        $Result.LoginLogoff | FT -Autosize;
+        $Result = Get-LoginLogoffDomain; $Result.LoginLogoff | FT -Autosize;
         Pause;
       };	  
       "5" { "`n`n  You selected: Get inactive AD Users / last logon more than eg 90 days`n"
-        $Result = Get-InavtiveADUsers;
-        $Result.InavtiveADUsers | FT -Autosize;
+        $Result = Get-InavtiveADUsers; $Result.InavtiveADUsers | FT -Autosize;
         Pause;
       };
       "6" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
         
       };
       "11" { "`n`n  You selected: Get-HotFixInstallDates for Local Server`n"
-        $Result = Get-HotFixInstallDatesLocal;
-        $Result.HotFixInstallDates | FT -Autosize;
+        $Result = Get-HotFixInstallDatesLocal; $Result.HotFixInstallDates | FT -Autosize;
         Pause;
       };
       "12" { "`n`n  You selected: Get-HotFixInstallDates for Domain Servers`n"
-        $Result = Get-HotFixInstallDatesDomain;
-        $Result.HotFixInstallDates | FT -Autosize;
+        $Result = Get-HotFixInstallDatesDomain; $Result.HotFixInstallDates | FT -Autosize;
         Pause;
       };
       "13" { "`n`n  You selected: Get-ExpiredCertificates for Local Server`n"
-        $Result = Get-ExpiredCertificatesLocal;
-        $Result.ExpiredCertificates | FT -Autosize;
+        $Result = Get-ExpiredCertificatesLocal; $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
       "14" { "`n`n  You selected: Get-ExpiredCertificates for Domain Servers`n"
-        $Result = Get-ExpiredCertificatesDomain;
-        $Result.ExpiredCertificates | FT -Autosize;
+        $Result = Get-ExpiredCertificatesDomain; $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
       "15" { "`n`n  You selected: Get-DateTimeStatus for Domain Servers`n"
-        $Result = Get-DateTimeStatusDomain;
-        $Result.DateTimeStatus | FT -Autosize;
+        $Result = Get-DateTimeStatusDomain; $Result.DateTimeStatus | FT -Autosize;
         Pause;
       };
       "16" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
-        $Result = Get-FSLogixErrorsDomain;
-        $Result.FSLogixErrors | FT -Autosize;
+        $Result = Get-FSLogixErrorsDomain; $Result.FSLogixErrors | FT -Autosize;
         Pause;
       };
       "99" { "`n`n  You selected: Test option #99`n"
