@@ -305,14 +305,14 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
     Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
       $fBlock01 = {
-        $fInternetTime = Try {(Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen")} Catch {"Not Available"}
-        $fLocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
-        $fLocalHostResult = New-Object psobject -Property ([ordered]@{
+        $fInternetTime = Try {(Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen")} Catch {"Not Available"};
+        $fLocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss");
+        New-Object psobject -Property ([ordered]@{
           InternetTime = If ($fInternetTime -ne "Not Available") {$fInternetTime.dateTime.replace("T"," ").split(".")[0]} Else {$fInternetTime};
           LocalTime = $fLocalTime;
           LocalNTPServer = (w32tm /query /source);
           LocalCulture = Get-Culture;
-          LocalTimeZone = (Get-TimeZone);
+          LocalTimeZone = Try {Get-TimeZone} Catch {(Get-WMIObject -Class Win32_TimeZone).Caption};
           InternetTimeZone = If ($fInternetTime -ne "Not Available") {$fInternetTime.timeZone} Else {$fInternetTime};
         });
       };
@@ -325,7 +325,7 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
           LocalTime = $fLocalTime;
           LocalNTPServer = (w32tm /query /source);
           LocalCulture = Get-Culture;
-          LocalTimeZone = (Get-TimeZone);
+          LocalTimeZone = Try {Get-TimeZone} Catch {(Get-WMIObject -Class Win32_TimeZone).Caption};
           InternetTimeZone = If ($fInternetTime -ne "Not Available") {$fInternetTime.timeZone} Else {$fInternetTime};
         });
       } ELSE {
