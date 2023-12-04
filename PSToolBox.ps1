@@ -304,25 +304,30 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
     Show-Title "Get Date and Time status from Domain Servers";
     Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
-      $fBlock01 = {New-Object psobject -Property ([ordered]@{
-        InternetTime = ((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").dateTime.replace("T"," ").split(".")[0])
-          LocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
-	      LocalNTPServer = (w32tm /query /source)
-	      LocalCulture = Get-Culture
-          LocalTimeZone = (Get-TimeZone)
-	      InternetTimeZone = $((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").timeZone)
-	    });
-	  };
-      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
+      $fBlock01 = {
+        $fInternetTime = Try {(Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen")} Catch {"Not Available"}
+        $fLocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
         $fLocalHostResult = New-Object psobject -Property ([ordered]@{
-          PSComputerName = $Env:COMPUTERNAME
-          InternetTime = ((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").dateTime.replace("T"," ").split(".")[0])
-          LocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
-	      LocalNTPServer = (w32tm /query /source)
-	      LocalCulture = Get-Culture
-          LocalTimeZone = (Get-TimeZone)
-	      InternetTimeZone = $((Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen").timeZone)
-		});
+          InternetTime = If ($fInternetTime -ne "Not Available") {$fInternetTime.dateTime.replace("T"," ").split(".")[0]} Else {$fInternetTime};
+          LocalTime = $fLocalTime;
+          LocalNTPServer = (w32tm /query /source);
+          LocalCulture = Get-Culture;
+          LocalTimeZone = (Get-TimeZone);
+          InternetTimeZone = If ($fInternetTime -ne "Not Available") {$fInternetTime.timeZone} Else {$fInternetTime};
+        });
+      };
+      IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
+        $fInternetTime = Try {(Invoke-RestMethod -Uri "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Copenhagen")} Catch {"Not Available"}
+        $fLocalTime = (Get-Date -f "yyyy-MM-dd HH:mm:ss")
+        $fLocalHostResult = New-Object psobject -Property ([ordered]@{
+          PSComputerName = $Env:COMPUTERNAME;
+          InternetTime = If ($fInternetTime -ne "Not Available") {$fInternetTime.dateTime.replace("T"," ").split(".")[0]} Else {$fInternetTime};
+          LocalTime = $fLocalTime;
+          LocalNTPServer = (w32tm /query /source);
+          LocalCulture = Get-Culture;
+          LocalTimeZone = (Get-TimeZone);
+          InternetTimeZone = If ($fInternetTime -ne "Not Available") {$fInternetTime.timeZone} Else {$fInternetTime};
+        });
       } ELSE {
         $JobResult = Invoke-Command -scriptblock $fBlock01 -ComputerName $fQueryComputer -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
       };
