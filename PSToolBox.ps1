@@ -1,7 +1,7 @@
 ### Powershell Toolbox, by John Holst, itm8
 #
 ### Parameter Functions
-Function Get-CustomerName { ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){$Entry} Else {$_} })};
+Function Get-CustomerName { ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){"$($Entry)_"} Else {"$($_)_"} })};
 Function Get-LogStartTime {
   # Add this line to Params: $fEventLogStartTime = (Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
   Param( $DefaultDays, $DefaultHours,
