@@ -22,10 +22,10 @@ Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
     $fQueryComputers = $fQueryComputers | Sort Name;
     Return $fQueryComputers;
 };
-Function Get-FilePath {
-  # Add this line to Params: $fFileName = "$(Get-FilePath)\$($fCustomerName)_<FILENAMETEXT>_$(get-date -f yyyy-MM-dd_HH.mm)"
-  Return "$([Environment]::GetFolderPath("Desktop"))"; # Example \$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
-  #Return "$($env:USERPROFILE)\Desktop"; # Example \$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
+Function Get-Filename { Param ( $fFileNameText, $fCustomerName ); ##
+  # Add this line to Params: $fFileName = (Get-FileName -fFileNameText "<FILENAMETEXT>" -fCustomerName $fCustomerName)
+  Return "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)$($fFileNameText)_$(get-date -f yyyy-MM-dd_HH.mm)";
+  #Return "$($env:USERPROFILE)\Desktop\$($fCustomerName)$($fFileNameText)_$(get-date -f yyyy-MM-dd_HH.mm)";
 };
 #
 ### Functions
@@ -33,7 +33,7 @@ Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Rest
   Param(
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
 	$fEventLogStartTime = (Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
-    $fFileName = "$(Get-FilePath)\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Get-LatestReboot_$($ENV:Computername)" -fCustomerName $fCustomerName)	
   );
   ## Script
     Show-Title "Get latest Shutdown / Restart / Reboot for Local Server - Events After: $($fEventLogStartTime)";
@@ -59,7 +59,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     $fExport = "Yes",
     $fExportExtended = ("Yes" | %{ If($Entry = Read-Host "  Export Standard & Extended(message included) result to file - ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fJobNamePrefix = "LatestReboot_",
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-LatestReboot_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Servers_Get-LatestReboot" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get latest Shutdown / Restart / Reboot for multiple Domain Servers - Events After: $($fEventLogStartTime)";
@@ -89,9 +89,9 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
 };
 Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
   Param(
-$fEventLogStartTime = $(Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
+    $fEventLogStartTime = $(Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$(Get-FilePath)\Get-LatestLoginLogoff_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Get-LatestLoginLogoff_$($ENV:Computername)" -fCustomerName $fCustomerName)
   );
   ## Default Variables
     $fUserProperty = @{n="User";e={(New-Object System.Security.Principal.SecurityIdentifier $_.ReplacementStrings[1]).Translate([System.Security.Principal.NTAccount])}}
@@ -117,7 +117,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
     $fQueryComputers = $(Get-QueryComputers),
     $fEventLogStartTime = $(Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-LatestLoginLogoff_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Servers_Get-LatestLoginLogoff" -fCustomerName $fCustomerName)
   );
   ## Default Variables
     $fUserProperty = @{n="User";e={(New-Object System.Security.Principal.SecurityIdentifier $_.ReplacementStrings[1]).Translate([System.Security.Principal.NTAccount])}}
@@ -144,7 +144,7 @@ Function Get-InavtiveADUsers {## Get inactive AD Users / Latest Logon more than 
     $fCustomerName = $(Get-CustomerName),
     $fDaysInactive = ("90" | %{ If($Entry = Read-Host "  Enter number of inactive days (Default: $_ Days)"){$Entry} Else {$_} }),
 	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_Inactive_ADUsers_last_$($fDaysInactive)_days_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Inactive_ADUsers_last_$($fDaysInactive)_days" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get AD Users Latest Logon / inactive more than $($fDaysInactive) days";
@@ -163,7 +163,7 @@ Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple D
   Param(
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$(Get-FilePath)\Get-LatestReboot_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Get-LatestReboot_$($ENV:Computername)" -fCustomerName $fCustomerName)
     );
   ## Script
     Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates Local Server";
@@ -186,7 +186,7 @@ Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple 
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
     #$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fExport = "Yes",
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-HotFixInstallDates_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Servers_Get-HotFixInstallDates" -fCustomerName $fCustomerName)
     );
   ## Script
     Show-Title "Get latest $($fHotfixInstallDates) HotFix Install Dates multiple Domain Servers";
@@ -239,7 +239,7 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
     $fCertSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter Certificate SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
     $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
 	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
-    $fFileName = "$(Get-FilePath)\Get-Expired_Certificates_$($ENV:Computername)_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Get-Expired_Certificates" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
@@ -262,7 +262,7 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fExpiresBeforeDays = ("90" | %{ If($Entry = Read-Host "  Enter number of days before expire (Default: $_ Days)"){$Entry} Else {$_} }),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fJobNamePrefix = "ExpiredCertificates_",
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_Servers_Get-Expired_Certificates_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "Servers_Get-Expired_Certificates" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on multiple Domain Servers";
@@ -296,7 +296,7 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
     $fQueryComputers = $(Get-QueryComputers),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fJobNamePrefix = "DateTimeStatus_",
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_DateTimeStatus_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fFileName = (Get-FileName -fFileNameText "DateTimeStatus" -fCustomerName $fCustomerName)
 	);
   ## Script
     Show-Title "Get Date and Time status from Domain Servers";
@@ -351,7 +351,7 @@ Function Get-FSLogixErrorsDomain {## Get FSLogix Errors - need an AD Server or S
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
     $fLogDays = ("7" | %{ If($Entry = Read-Host "  Enter number of days in searchscope (Default: $_ Days)"){$Entry} Else {$_} }),
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_FSLogix Errors_$(get-date -f yyyy-MM-dd_HH.mm)",
+    $fFileName = (Get-FileName -fFileNameText "FSLogix Errors" -fCustomerName $fCustomerName),
     $fErrorCodes1 = @("00000079", "0000001f", "00000020"),
     $fErrorCodes2 = @("00000079", "0000001f"),
     $fErrorCodeList = "  Internal Error Code Description:
@@ -426,6 +426,35 @@ Function Get-FSLogixErrorsDomain {## Get FSLogix Errors - need an AD Server or S
     $Return.FSLogixErrors = $fResult | Sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText;
     Return $Return;
 };
+Function Get-FolderPermissionLocal { ## 
+  Param(
+    $fCustomerName = $(Get-CustomerName),
+    $fFolderPaths = ($Entry = @(((Read-Host "  Enter FolderPath(s) to get Permission list, separated by comma ").Split(",")).Trim())),
+    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = (Get-FileName -fFileNameText "Get-FolderPermission_$($ENV:Computername)" -fCustomerName $($fCustomerName))
+  );
+  ## Script
+    Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
+    $fResult = ForEach ($fFolderPath in $fFolderPaths) {
+      $fFolders = Get-ChildItem -Directory -Path "$($fFolderPath)" -Recurse -Force;
+      ForEach ($fFolder in $fFolders) {
+        $fAcl = Get-Acl -Path $fFolder.FullName;
+        ForEach ($fAccess in $fAcl.Access) {
+          New-Object PSObject -Property ([ordered]@{
+            'FolderName'=$fFolder.FullName;
+            'Group/User'=$fAccess.IdentityReference;
+            'Permissions'= $fAccess.FileSystemRights;
+            'Inherited'=$fAccess.IsInherited;
+      });};};};
+  ## Output
+    #$fResult | Sort FolderName, "Group/User" | Select FolderName, "Group/User", Permissions, Inherited | FT -autosize;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) {$fResult | Sort FolderName, "Group/User" | Select FolderName, "Group/User", Permissions, Inherited | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{}
+    $Return.FolderPermission = $fResult | Sort FolderName, "Group/User" | Select FolderName, "Group/User", Permissions, Inherited;
+    Return $Return;
+};
 ## Shared Functions
 Function Show-Title {
   param ( [string]$Title );
@@ -459,8 +488,9 @@ Function Show-Menu {
   Write-Host "  Press '12' for Get-HotFixInstallDates for Domain Servers.";
   Write-Host "  Press '13' for Get-ExpiredCertificates for Local Server.";
   Write-Host "  Press '14' for Get-ExpiredCertificates for Domain Servers.";
-  Write-Host "  Press '15' for Get-DateTimeStatus for Domain Servers.";
-  Write-Host "  Press '16' for Get-FSLogixErrors for Domain Servers.";
+  Write-Host "  Press '15' for Get-FolderPermission for Local Server.";
+  Write-Host "  Press '16' for Get-DateTimeStatus for Domain Servers.";
+  Write-Host "  Press '17' for Get-FSLogixErrors for Domain Servers.";
   #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
   Write-Host "   Press 'H'  for Toolbox Help / Information.";
@@ -510,11 +540,15 @@ Function ToolboxMenu {
         $Result = Get-ExpiredCertificatesDomain; $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
-      "15" { "`n`n  You selected: Get-DateTimeStatus for Domain Servers`n"
+      "15" { "`n`n  You selected: Get-FolderPermission `n"
+        $Result = Get-FolderPermissionLocal; $Result.FolderPermission | FT -Autosize;
+        Pause;
+      };
+      "16" { "`n`n  You selected: Get-DateTimeStatus for Domain Servers`n"
         $Result = Get-DateTimeStatusDomain; $Result.DateTimeStatus | FT -Autosize;
         Pause;
       };
-      "16" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
+      "17" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
         $Result = Get-FSLogixErrorsDomain; $Result.FSLogixErrors | FT -Autosize;
         Pause;
       };
