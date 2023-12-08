@@ -1,4 +1,7 @@
 ### Powershell Toolbox, by John Holst, itm8
+# Shortcut Name: GIT-PSToolbox
+# Shortcut: Destination: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -noexit -ExecutionPolicy Bypass -command "IEX ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/jholst71/public/main/PSToolBox.ps1'))"
+# Shortcut: Start in: %Userprofile%\Desktop
 #
 ### Parameter Functions
 Function Get-CustomerName { ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){"$($Entry)_"} Else {"$($_)_"} })};
@@ -44,7 +47,7 @@ Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Rest
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) {$fLatestBootupEvents | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName, Message | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation;};
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.LatestBootEventsExtended = $fLatestBootEvents | Select MachineName, TimeGenerated, UserName, Message;
     $Return.LatestBootEvents = $fLatestBootEvents | Select MachineName, TimeGenerated, UserName;
     $Return.LatestBootTime = $fLatestBootTime;
@@ -83,7 +86,7 @@ Function Get-LatestRebootDomain { ### Get-LatestReboot - Get Latest Reboot / Res
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
     If (($fExportExtended -eq "Y") -or ($fExportExtended -eq "YES")) { $fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName, Message | Export-CSV "$($fFileName)_Extended.csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.LatestBootEvents = $fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName;
     Return $Return;
 };
@@ -107,7 +110,7 @@ Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort User, Time | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.LoginLogoff = $fResult | sort User, Time;
     Return $Return;
 };
@@ -135,7 +138,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort User, Time | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.LoginLogoff = $fResult | sort User, Time;
     Return $Return;
 };
@@ -155,8 +158,28 @@ Function Get-InavtiveADUsers {## Get inactive AD Users / Latest Logon more than 
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.InavtiveADUsers = $fResult | Sort DisplayName | Select CN,DisplayName,Samaccountname,LastLogonDate,Enabled,PasswordNeverExpires,PwdLastSet,Description;
+    Return $Return;
+};
+Function Get-InavtiveADComputers {## Get inactive AD Computers / Latest Logon more than eg 90 days
+  Param(
+    $fCustomerName = $(Get-CustomerName),
+    $fDaysInactive = ("90" | %{ If($Entry = Read-Host "  Enter number of inactive days (Default: $_ Days)"){$Entry} Else {$_} }),
+	$fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = (Get-FileName -fFileNameText "Inactive_ADComputers_last_$($fDaysInactive)_days" -fCustomerName $fCustomerName)
+  );
+  ## Script
+    Show-Title "Get AD Computers Latest Logon / inactive more than $($fDaysInactive) days";
+	$fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fDaysInactive));
+    $fResult = Get-ADComputer -Filter {LastLogonDate -lt $fDaysInactiveTimestamp } -Properties CN, LastLogonDate, OperatingSystem, CanonicalName | Sort-Object -Property CN | Select CN, LastLogonDate, OperatingSystem, CanonicalName;
+  ## Output
+    #$fResult | Sort CN | Select CN, LastLogonDate, OperatingSystem, CanonicalName;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort CN | Select CN, LastLogonDate, OperatingSystem, CanonicalName | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{};
+    $Return.InavtiveADComputers = $fResult | Sort CN | Select CN, LastLogonDate, OperatingSystem, CanonicalName;
     Return $Return;
 };
 Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple Domain servers
@@ -175,7 +198,7 @@ Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple D
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort MachineName, TimeGenerated | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.HotFixInstallDates = $fResult | sort MachineName, TimeGenerated | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
     Return $Return;
 };
@@ -230,7 +253,7 @@ Function Get-HotFixInstallDatesDomain { ### Get-HotFixInstallDates for multiple 
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | sort PSComputerName | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.HotFixInstallDates = $fResult | sort PSComputerName | Select PSComputerName, InstalledOn, InstalledBy, Description, HotFixID, OperatingSystem, IPv4Address;
     Return $Return;
 };
@@ -250,7 +273,7 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.ExpiredCertificates = $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject;
     Return $Return;
 };
@@ -286,7 +309,7 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
     Return $Return;
 };
@@ -342,7 +365,7 @@ Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort PSComputerName | Select PSComputerName, InternetTime, LocalTime, LocalNTPServer, LocalCulture, LocalTimeZone, InternetTimeZone | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.DateTimeStatus = $fResult | Sort PSComputerName | Select PSComputerName, InternetTime, LocalTime, LocalNTPServer, LocalCulture, LocalTimeZone, InternetTimeZone;
     Return $Return;
 };
@@ -422,7 +445,7 @@ Function Get-FSLogixErrorsDomain {## Get FSLogix Errors - need an AD Server or S
       $fLogText | sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText | Export-CSV "$($fFileName)_All_Errors.csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation;
 	};
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.FSLogixErrors = $fResult | Sort Servername, Date, Time | Select Servername, Date, Time, Error, tid, LogText;
     Return $Return;
 };
@@ -451,7 +474,7 @@ Function Get-FolderPermissionLocal { ##
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) {$fResult | Sort FolderName, "Group/User" | Select FolderName, "Group/User", Permissions, Inherited | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
-    [hashtable]$Return = @{}
+    [hashtable]$Return = @{};
     $Return.FolderPermission = $fResult | Sort FolderName, "Group/User" | Select FolderName, "Group/User", Permissions, Inherited;
     Return $Return;
 };
@@ -482,7 +505,8 @@ Function Show-Menu {
   Write-Host "  Press '3'  for Get-LoginLogoff for Local Server.";
   Write-Host "  Press '4'  for Get-LoginLogoff for Domain Servers.";
   Write-Host "  Press '5'  for Get inactive AD Users / last logon more than eg 90 days.";
-  #Write-Host "  Press '6'  for Start SCOM MaintenanceMode for Local Server (Script).";
+  Write-Host "  Press '6'  for Get inactive AD Computers / last active more than eg 90 days.";
+  #Write-Host "  Press '9'  for Start SCOM MaintenanceMode for Local Server (Script).";
   Write-Host "  "
   Write-Host "  Press '11' for Get-HotFixInstallDates for Local Server.";
   Write-Host "  Press '12' for Get-HotFixInstallDates for Domain Servers.";
@@ -521,8 +545,13 @@ Function ToolboxMenu {
         $Result = Get-InavtiveADUsers; $Result.InavtiveADUsers | FT -Autosize;
         Pause;
       };
-      "6" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
-        
+      "6" { "`n`n  You selected: Get inactive AD Computers / last active more than eg 90 days`n"
+        $Result = Get-InavtiveADComputers; $Result.InavtiveADComputers | FT -Autosize;
+        Pause;
+      };
+      "9" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
+        #Start-SCOMMaintenanceMode;
+        #Pause;
       };
       "11" { "`n`n  You selected: Get-HotFixInstallDates for Local Server`n"
         $Result = Get-HotFixInstallDatesLocal; $Result.HotFixInstallDates | FT -Autosize;
