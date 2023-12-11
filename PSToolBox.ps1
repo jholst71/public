@@ -182,6 +182,25 @@ Function Get-InavtiveADComputers {## Get inactive AD Computers / Latest Logon mo
     $Return.InavtiveADComputers = $fResult | Sort CN | Select CN, LastLogonDate, OperatingSystem, CanonicalName;
     Return $Return;
 };
+Function Get-UserPasswordNeverExpires {## Get Password Never Expires for User Accounts
+  Param(
+    $fCustomerName = $(Get-CustomerName),
+    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = (Get-FileName -fFileNameText "UserPasswordNeverExpires" -fCustomerName $fCustomerName)
+  );
+  ## Script
+    Show-Title "Get Password Never Expires for User Accounts";
+    $fDaysInactiveTimestamp = [DateTime]::Now.AddDays(-$($fDaysInactive));
+    $fResult = get-aduser -filter * -properties Name, PasswordNeverExpires, pwdlastSet | where { $_.passwordNeverExpires -eq $true } | Sort Name | Select-Object Name, SamAccountName, @{n="PwdNeverExpires";e={$_.PasswordNeverExpires}}, @{n="PwdLastSet";e={[datetime]::FromFileTime($_."PwdLastSet")}}, Enabled;
+  ## Output
+    #$fResult;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{};
+    $Return.UserPasswordNeverExpires = $fResult;
+    Return $Return;
+};
 Function Get-HotFixInstallDatesLocal { ### Get-HotFixInstallDates for multiple Domain servers
   Param(
     $fHotfixInstallDates = ("3" | %{ If($Entry = Read-Host "  Enter number of Hotfix-install dates per Computer (Default: $_ Install Dates)"){$Entry} Else {$_} }),
@@ -506,6 +525,7 @@ Function Show-Menu {
   Write-Host "  Press '4'  for Get-LoginLogoff for Domain Servers.";
   Write-Host "  Press '5'  for Get inactive AD Users / last logon more than eg 90 days.";
   Write-Host "  Press '6'  for Get inactive AD Computers / last active more than eg 90 days.";
+  Write-Host "  Press '7'  for Get Password Never Expires for User Accounts.";
   #Write-Host "  Press '9'  for Start SCOM MaintenanceMode for Local Server (Script).";
   Write-Host "  "
   Write-Host "  Press '11' for Get-HotFixInstallDates for Local Server.";
@@ -547,6 +567,10 @@ Function ToolboxMenu {
       };
       "6" { "`n`n  You selected: Get inactive AD Computers / last active more than eg 90 days`n"
         $Result = Get-InavtiveADComputers; $Result.InavtiveADComputers | FT -Autosize;
+        Pause;
+      };
+      "7" { "`n`n  You selected: Get Password Never Expires for User Accounts`n"
+        $Result = Get-UserPasswordNeverExpires; $Result.UserPasswordNeverExpires | FT -Autosize;
         Pause;
       };
       "9" { "`n`n  You selected: Start SCOM MaintenanceMode for Local Server`n"
