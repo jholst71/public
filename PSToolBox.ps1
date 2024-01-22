@@ -4,7 +4,7 @@
 # Shortcut: Start in: %Userprofile%\Desktop
 #
 ### Parameter Functions
-Function Get-CustomerName { ("CustomerName" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){"$($Entry)_"} Else {"$($_)_"} })};
+Function Get-CustomerName { ("$($Env:USERDOMAIN)" | %{ If($Entry = Read-Host "  Enter CustomerName ( Default: $_ )"){"$($Entry)_"} Else {"$($_)_"} })}; # Add this line to Params: $fCustomerName = $(Get-CustomerName)
 Function Get-LogStartTime {
   # Add this line to Params: $fEventLogStartTime = (Get-LogStartTime -DefaultDays "7" -DefaultHours "12"),
   Param( $DefaultDays, $DefaultHours,
@@ -15,20 +15,20 @@ Function Get-LogStartTime {
     Return [DateTime]::Now.AddDays(-$($fLastXDays)).AddHours(-$($fLastXHours));
 };
 Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
-  # Add this line to Params: $fQueryComputers = $(Get-QueryComputers),
-  Param(
-    $fQueryComputerSearch = ("*" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {$_} }),
-    $fQueryComputerExcludeList = ($Entry = @(((Read-Host "  Enter ServerName(s) to be Exluded, separated by comma ").Split(",")).Trim()))
-	);
-  ## Script
-    $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
-    $fQueryComputers = $fQueryComputers | Sort Name;
-    Return $fQueryComputers;
-};
+   # Add this line to Params: $fQueryComputers = $(Get-QueryComputers -DefaultComputerSearch "*" -DefaultComputerExcludeList ""), # Enter SearchName(s) / ServerName(s), separated by comma
+   Param( $DefaultComputerSearch, $DefaultComputerExcludeList,
+     $fQueryComputerSearch = ("$($DefaultComputerSearch)" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} }),
+	 $fQueryComputerExcludeList = ("$($DefaultComputerExcludeList)" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} })
+ );
+   ## Script
+	 $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
+     $fQueryComputers = $fQueryComputers | Sort Name;
+     Return $fQueryComputers;
+ };
 Function Get-Filename { Param ( $fFileNameText, $fCustomerName ); ##
   # Add this line to Params: $fFileName = (Get-FileName -fFileNameText "<FILENAMETEXT>" -fCustomerName $fCustomerName)
-  Return "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)$($fFileNameText)_$(get-date -f yyyy-MM-dd_HH.mm)";
-  #Return "$($env:USERPROFILE)\Desktop\$($fCustomerName)$($fFileNameText)_$(get-date -f yyyy-MM-dd_HH.mm)";
+  Return "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)$(($fFileNameText).Split([IO.Path]::GetInvalidFileNameChars()) -join '_')_($(get-date -f "yyyy-MM-dd_HH.mm"))";
+  #Return "$($env:USERPROFILE)\Desktop\$($fCustomerName)$()$fFileNameText).Split([IO.Path]::GetInvalidFileNameChars())_$(get-date -f "yyyy-MM-dd_HH.mm")";
 };
 #
 ### Functions
@@ -41,15 +41,15 @@ Function Get-LatestRebootLocal { ### Get-LatestReboot - Get Latest Reboot / Rest
   ## Script
     Show-Title "Get latest Shutdown / Restart / Reboot for Local Server - Events After: $($fEventLogStartTime)";
     $fLatestBootTime = Get-WmiObject win32_operatingsystem | select csname, @{LABEL="LastBootUpTime";EXPRESSION={$_.ConverttoDateTime($_.lastbootuptime)}};
-    $fLatestBootEvents = Get-EventLog -LogName System -After $fEventLogStartTime | Where-Object {($_.EventID -eq 1074) -or ($_.EventID -eq 6008) -or ($_.EventID -eq 41)};
+    $fResult = Get-EventLog -LogName System -After $fEventLogStartTime | Where-Object {($_.EventID -eq 1074) -or ($_.EventID -eq 6008) -or ($_.EventID -eq 41)};
   ## Output
-    # $fLatestBootEvents | Select MachineName, TimeGenerated, UserName, Message | fl; $fLatestBootEvents | Select MachineName, TimeGenerated, UserName | ft -Autosize; $fLatestBootTime;
+    # $fResult | Select MachineName, TimeGenerated, UserName, Message | fl; $fResult | Select MachineName, TimeGenerated, UserName | ft -Autosize; $fLatestBootTime;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) {$fLatestBootupEvents | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName, Message | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation;};
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) {$fResult | sort MachineName, TimeGenerated | Select MachineName, TimeGenerated, UserName, Message | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation;};
   ## Return
     [hashtable]$Return = @{};
-    $Return.LatestBootEventsExtended = $fLatestBootEvents | Select MachineName, TimeGenerated, UserName, Message;
-    $Return.LatestBootEvents = $fLatestBootEvents | Select MachineName, TimeGenerated, UserName;
+    $Return.LatestBootEventsExtended = $fResult | Select MachineName, TimeGenerated, UserName, Message;
+    $Return.LatestBootEvents = $fResult | Select MachineName, TimeGenerated, UserName;
     $Return.LatestBootTime = $fLatestBootTime;
     Return $Return
 };
@@ -100,7 +100,7 @@ Function Get-LoginLogoffLocal { ## Get-LoginLogoff from Logged On Server
     $fUserProperty = @{n="User";e={(New-Object System.Security.Principal.SecurityIdentifier $_.ReplacementStrings[1]).Translate([System.Security.Principal.NTAccount])}}
     $fTypeProperty = @{n="Action";e={if($_.EventID -eq 7001) {"Logon"} elseif ($_.EventID -eq 7002){"Logoff"} else {"other"}}}
     $fTimeProperty = @{n="Time";e={$_.TimeGenerated}}
-    $fMachineNameProperty = @{n="MachinenName";e={$_.MachineName}}
+    $fMachineNameProperty = @{n="MachineName";e={$_.MachineName}}
   ## Script
     Show-Title "Get latest Login / Logoff for Local Server - Events After: $($fEventLogStartTime)";
     Write-Host "Querying Computer: $($ENV:Computername)"
@@ -126,7 +126,7 @@ Function Get-LoginLogoffDomain { ## Get-LoginLogoffDomain (Remote) from Event Lo
     $fUserProperty = @{n="User";e={(New-Object System.Security.Principal.SecurityIdentifier $_.ReplacementStrings[1]).Translate([System.Security.Principal.NTAccount])}}
     $fTypeProperty = @{n="Action";e={if($_.EventID -eq 7001) {"Logon"} elseif ($_.EventID -eq 7002){"Logoff"} else {"other"}}}
     $fTimeProperty = @{n="Time";e={$_.TimeGenerated}}
-    $fMachineNameProperty = @{n="MachinenName";e={$_.MachineName}}
+    $fMachineNameProperty = @{n="MachineName";e={$_.MachineName}}
   ## Script
     Show-Title "Get latest Login / Logoff  for multiple Domain Servers - Events After: $($fEventLogStartTime)";
     $fResult = foreach ($fComputer in $fQueryComputers.name) { # Get Values like .Name, .DNSHostName
@@ -504,7 +504,7 @@ Function Show-Title {
 };
 Function Show-JobStatus { Param ($fJobNamePrefix)
     DO { IF ((Get-Job -Name "$($fJobNamePrefix)*").count -ge 1) {$fStatus = ((Get-Job -State Completed).count/(Get-Job -Name "$($fJobNamePrefix)*").count) * 100;
-      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }; }
+      Write-Progress -Activity "Waiting for $((Get-Job -State Running).count) of $((Get-Job -Name "$($fJobNamePrefix)*").count) job(s) to complete..." -Status "$($fStatus) % completed" -PercentComplete $fStatus; }; }
     While ((Get-job -Name "$($fJobNamePrefix)*" | Where State -eq Running));
 };
 Function Show-Help {
@@ -519,22 +519,22 @@ Function Show-Menu {
   Show-Title $Title;
   Clear-Host;
   Write-Host "`n  ================ $Title ================`n";
-  Write-Host "  Press '1'  for Get-LatestReboot for Local Server.";
-  Write-Host "  Press '2'  for Get-LatestReboot for Domain Servers.";
-  Write-Host "  Press '3'  for Get-LoginLogoff for Local Server.";
-  Write-Host "  Press '4'  for Get-LoginLogoff for Domain Servers.";
-  Write-Host "  Press '5'  for Get inactive AD Users / last logon more than eg 90 days.";
-  Write-Host "  Press '6'  for Get inactive AD Computers / last active more than eg 90 days.";
+  Write-Host "  Press '1'  for Get LatestReboot for Local Server.";
+  Write-Host "  Press '2'  for Get LatestReboot for Domain Servers.";
+  Write-Host "  Press '3'  for Get LoginLogoff for Local Server.";
+  Write-Host "  Press '4'  for Get LoginLogoff for Domain Servers.";
+  Write-Host "  Press '5'  for Get Inactive AD Users / last logon more than eg 90 days.";
+  Write-Host "  Press '6'  for Get Inactive AD Computers / last active more than eg 90 days.";
   Write-Host "  Press '7'  for Get Password Never Expires for User Accounts.";
   #Write-Host "  Press '9'  for Start SCOM MaintenanceMode for Local Server (Script).";
   Write-Host "  "
-  Write-Host "  Press '11' for Get-HotFixInstallDates for Local Server.";
-  Write-Host "  Press '12' for Get-HotFixInstallDates for Domain Servers.";
-  Write-Host "  Press '13' for Get-ExpiredCertificates for Local Server.";
-  Write-Host "  Press '14' for Get-ExpiredCertificates for Domain Servers.";
-  Write-Host "  Press '15' for Get-FolderPermission for Local Server.";
-  Write-Host "  Press '16' for Get-DateTimeStatus for Domain Servers.";
-  Write-Host "  Press '17' for Get-FSLogixErrors for Domain Servers.";
+  Write-Host "  Press '11' for Get HotFixInstallDates for Local Server.";
+  Write-Host "  Press '12' for Get HotFixInstallDates for Domain Servers.";
+  Write-Host "  Press '13' for Get ExpiredCertificates for Local Server.";
+  Write-Host "  Press '14' for Get ExpiredCertificates for Domain Servers.";
+  Write-Host "  Press '15' for Get FolderPermission for Local Server.";
+  Write-Host "  Press '16' for Get DateTimeStatus for Domain Servers.";
+  Write-Host "  Press '17' for Get FSLogixErrors for Domain Servers.";
   #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
   Write-Host "   Press 'H'  for Toolbox Help / Information.";
@@ -545,27 +545,27 @@ Function ToolboxMenu {
     Show-Menu
     $selection = Read-Host "`n  Please make a selection"
     switch ($selection){
-      "1" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
+      "1" { "`n`n  You selected: Get LatestReboot for Local Server`n"
         $Result = Get-LatestRebootLocal; $Result.LatestBootEventsExtended | FL; $result.LatestBootEvents | FT -Autosize; $result.LatestBootTime | FT -Autosize;
         Pause;
       };
-      "2" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
+      "2" { "`n`n  You selected: Get LatestReboot for Domain Servers`n"
         $Result = Get-LatestRebootDomain; $Result.LatestBootEvents | FT -Autosize;
         Pause;
       };
-      "3" { "`n`n  You selected: Get-LatestReboot for Local Server`n"
+      "3" { "`n`n  You selected: Get LoginLogoff for Local Server`n"
         $Result = Get-LoginLogoffLocal; $Result.LoginLogoff | FT -Autosize;
         Pause;
       };
-      "4" { "`n`n  You selected: Get-LatestReboot for Domain Servers`n"
+      "4" { "`n`n  You selected: Get LoginLogoff for Domain Servers`n"
         $Result = Get-LoginLogoffDomain; $Result.LoginLogoff | FT -Autosize;
         Pause;
       };	  
-      "5" { "`n`n  You selected: Get inactive AD Users / last logon more than eg 90 days`n"
+      "5" { "`n`n  You selected: Get Inactive AD Users / last logon more than eg 90 days`n"
         $Result = Get-InavtiveADUsers; $Result.InavtiveADUsers | FT -Autosize;
         Pause;
       };
-      "6" { "`n`n  You selected: Get inactive AD Computers / last active more than eg 90 days`n"
+      "6" { "`n`n  You selected: Get Inactive AD Computers / last active more than eg 90 days`n"
         $Result = Get-InavtiveADComputers; $Result.InavtiveADComputers | FT -Autosize;
         Pause;
       };
@@ -577,31 +577,31 @@ Function ToolboxMenu {
         #Start-SCOMMaintenanceMode;
         #Pause;
       };
-      "11" { "`n`n  You selected: Get-HotFixInstallDates for Local Server`n"
+      "11" { "`n`n  You selected: Get HotFixInstallDates for Local Server`n"
         $Result = Get-HotFixInstallDatesLocal; $Result.HotFixInstallDates | FT -Autosize;
         Pause;
       };
-      "12" { "`n`n  You selected: Get-HotFixInstallDates for Domain Servers`n"
+      "12" { "`n`n  You selected: Get HotFixInstallDates for Domain Servers`n"
         $Result = Get-HotFixInstallDatesDomain; $Result.HotFixInstallDates | FT -Autosize;
         Pause;
       };
-      "13" { "`n`n  You selected: Get-ExpiredCertificates for Local Server`n"
+      "13" { "`n`n  You selected: Get ExpiredCertificates for Local Server`n"
         $Result = Get-ExpiredCertificatesLocal; $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
-      "14" { "`n`n  You selected: Get-ExpiredCertificates for Domain Servers`n"
+      "14" { "`n`n  You selected: Get ExpiredCertificates for Domain Servers`n"
         $Result = Get-ExpiredCertificatesDomain; $Result.ExpiredCertificates | FT -Autosize;
         Pause;
       };
-      "15" { "`n`n  You selected: Get-FolderPermission `n"
+      "15" { "`n`n  You selected: Get FolderPermission `n"
         $Result = Get-FolderPermissionLocal; $Result.FolderPermission | FT -Autosize;
         Pause;
       };
-      "16" { "`n`n  You selected: Get-DateTimeStatus for Domain Servers`n"
+      "16" { "`n`n  You selected: Get DateTimeStatus for Domain Servers`n"
         $Result = Get-DateTimeStatusDomain; $Result.DateTimeStatus | FT -Autosize;
         Pause;
       };
-      "17" { "`n`n  You selected: Get-FSLogixErrors for Domain Servers`n"
+      "17" { "`n`n  You selected: Get FSLogixErrors for Domain Servers`n"
         $Result = Get-FSLogixErrorsDomain; $Result.FSLogixErrors | FT -Autosize;
         Pause;
       };
