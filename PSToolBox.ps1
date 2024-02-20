@@ -286,14 +286,14 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
   ## Script
     Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
 	$fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
-    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter
+    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select @{Name="Expires";Expression={$_.NotAfter}}, FriendlyName, Subject, @{Name="Created";Expression={$_.NotBefore}};
   ## Output
-    #$fResult | sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | FT -autosize;
+    #$fResult | Sort Expires, FriendlyName | ft Expires, FriendlyName, Subject, Created | FT -autosize;
   ## Exports
     If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{};
-    $Return.ExpiredCertificates = $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject;
+    $Return.ExpiredCertificates = $fResult | Sort Expires, FriendlyName | ft Expires, FriendlyName, Subject, Created;
     Return $Return;
 };
 Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
@@ -311,8 +311,8 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
     $fResult = Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
-      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject,FriendlyName,NotAfter};
-      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter;};
+      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select @{Name="Expires";Expression={$_.NotAfter}}, FriendlyName, Subject, @{Name="Created";Expression={$_.NotBefore}}};
+      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select @{Name="Expires";Expression={$_.NotAfter}}, FriendlyName, Subject, @{Name="Created";Expression={$_.NotBefore}};};
       IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
         $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01;
       } ELSE {
@@ -324,12 +324,12 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
     $fResult = $fResult + $fLocalHostResult;
   ## Output
-    #$fResult | sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | FT -autosize;
+    #$fResult | Sort PSComputerName, Expires, FriendlyName | ft PSComputerName, Expires, FriendlyName, Subject, Created | FT -autosize;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort PSComputerName, Expires, FriendlyName | ft PSComputerName, Expires, FriendlyName, Subject, Created | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{};
-    $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
+    $Return.ExpiredCertificates = $fResult | Sort PSComputerName, Expires, FriendlyName | ft PSComputerName, Expires, FriendlyName, Subject, Created;
     Return $Return;
 };
 Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server or Server with RSAT
