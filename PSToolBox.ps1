@@ -290,7 +290,7 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
   ## Output
     #$fResult | Sort Expires, FriendlyName | ft Expires, FriendlyName, Subject, Created | FT -autosize;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort Expires, FriendlyName | Select Expires, FriendlyName, Subject, Created | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{};
     $Return.ExpiredCertificates = $fResult | Sort Expires, FriendlyName | ft Expires, FriendlyName, Subject, Created;
