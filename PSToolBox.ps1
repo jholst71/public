@@ -286,14 +286,14 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
   ## Script
     Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
 	$fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
-    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select @{Name="Expires";Expression={$_.NotAfter}}, FriendlyName, Subject, @{Name="Created";Expression={$_.NotBefore}};
+    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter
   ## Output
-    #$fResult | Sort Expires, FriendlyName | ft Expires, FriendlyName, Subject, Created | FT -autosize;
+    #$fResult | sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | FT -autosize;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort Expires, FriendlyName | Select Expires, FriendlyName, Subject, Created | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{};
-    $Return.ExpiredCertificates = $fResult | Sort Expires, FriendlyName | ft Expires, FriendlyName, Subject, Created;
+    $Return.ExpiredCertificates = $fResult |  sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject;
     Return $Return;
 };
 Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
@@ -311,8 +311,8 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
     $fResult = Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
-      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select @{Name="Expires";Expression={$_.NotAfter}}, FriendlyName, Subject, @{Name="Created";Expression={$_.NotBefore}}};
-      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select @{Name="Expires";Expression={$_.NotAfter}}, FriendlyName, Subject, @{Name="Created";Expression={$_.NotBefore}};};
+      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject,FriendlyName,NotAfter};
+      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter;};
       IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
         $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01;
       } ELSE {
@@ -324,14 +324,45 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
     $fResult = $fResult + $fLocalHostResult;
   ## Output
-    #$fResult | Sort PSComputerName, Expires, FriendlyName | ft PSComputerName, Expires, FriendlyName, Subject, Created | FT -autosize;
+    #$fResult | sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | FT -autosize;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort PSComputerName, Expires, FriendlyName | ft PSComputerName, Expires, FriendlyName, Subject, Created | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{};
-    $Return.ExpiredCertificates = $fResult | Sort PSComputerName, Expires, FriendlyName | ft PSComputerName, Expires, FriendlyName, Subject, Created;
+    $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
     Return $Return;
 };
+Function Get-TimeSyncStatus-Domain {## Get TimeSync Status (Registry) - need an AD Server or Server with RSAT
+  Param(
+    $fCustomerName = $(Get-CustomerName),
+    $fQueryComputers = $(Get-QueryComputers),
+    $fFileName = "$(Get-FilePath)\$($fCustomerName)_TimeSyncStatus_$(get-date -f yyyy-MM-dd_HH.mm)"
+  );
+  ## Script
+    Show-Title "Get TimeSync Status (Registry)";
+    $NTP_reg = "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters"
+    $Scriptblock01 = {
+      $TimeServiceStatus = Get-Service W32Time | Select DisplayName, Status
+      $NTPConfigStatus = Get-ItemProperty $USING:NTP_reg | Select NtpServer, Type
+      $NTPStatusResult = [pscustomobject]@{
+        "Servername" = "$($fQueryComputer.Name)"
+        "NtpServer" = $NTPConfigStatus.NtpServer
+        "NTPType" = $NTPConfigStatus.Type
+        "TimeServiceStatus" = $TimeServiceStatus.Status};
+      $NTPStatusResult; 
+    };
+    $fResult = Foreach ($fQueryComputer in $fQueryComputers) {
+      Invoke-Command -ComputerName $fQueryComputer -ScriptBlock $Scriptblock01
+    };
+ ## Output
+    #$fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus;
+  ## Exports
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+  ## Return
+    [hashtable]$Return = @{};
+    $Return.TimeSyncStatus = $fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus;
+    Return $Return;
+}
 Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server or Server with RSAT
   Param(
     $fCustomerName = $(Get-CustomerName),
@@ -533,8 +564,9 @@ Function Show-Menu {
   Write-Host "  Press '13' for Get ExpiredCertificates for Local Server.";
   Write-Host "  Press '14' for Get ExpiredCertificates for Domain Servers.";
   Write-Host "  Press '15' for Get FolderPermission for Local Server.";
-  Write-Host "  Press '16' for Get DateTimeStatus for Domain Servers.";
-  Write-Host "  Press '17' for Get FSLogixErrors for Domain Servers.";
+  Write-Host "  Press '16' for Get TimeSyncStatus for Domain Servers.";
+  Write-Host "  Press '17' for Get DateTimeStatus for Domain Servers.";
+  Write-Host "  Press '18' for Get FSLogixErrors for Domain Servers.";
   #Write-Host "  Press '99' for this option.";
   Write-Host "  ";
   Write-Host "   Press 'H'  for Toolbox Help / Information.";
@@ -597,11 +629,15 @@ Function ToolboxMenu {
         $Result = Get-FolderPermissionLocal; $Result.FolderPermission | FT -Autosize;
         Pause;
       };
-      "16" { "`n`n  You selected: Get DateTimeStatus for Domain Servers`n"
+      "16" { "`n`n  You selected: Get TimeSync Status for Domain Servers`n"
+        $Result = Get-TimeSyncStatus-Domain; $Result.TimeSyncStatus | FT -Autosize;
+        Pause;
+      };
+      "17" { "`n`n  You selected: Get DateTimeStatus for Domain Servers`n"
         $Result = Get-DateTimeStatusDomain; $Result.DateTimeStatus | FT -Autosize;
         Pause;
       };
-      "17" { "`n`n  You selected: Get FSLogixErrors for Domain Servers`n"
+      "18" { "`n`n  You selected: Get FSLogixErrors for Domain Servers`n"
         $Result = Get-FSLogixErrorsDomain; $Result.FSLogixErrors | FT -Autosize;
         Pause;
       };
