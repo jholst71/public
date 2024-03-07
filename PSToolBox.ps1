@@ -16,16 +16,16 @@ Function Get-LogStartTime {
 };
 Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
    # Add this line to Params: $fQueryComputers = $(Get-QueryComputers -DefaultComputerSearch "*" -DefaultComputerExcludeList ""), # Enter SearchName(s) / ServerName(s), separated by comma
-   Param( $DefaultComputerSearch, $DefaultComputerExcludeList,
+   Param( $DefaultComputerSearch = "*", $DefaultComputerExcludeList = "",
      $fQueryComputerSearch = ("$($DefaultComputerSearch)" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} }),
      $fQueryComputerExcludeList = ("$($DefaultComputerExcludeList)" | %{ If($Entry = @(((Read-Host "  Enter Exclusion ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} })
- );
+   );
    ## Script
-	 $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
+     $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
      $fQueryComputers = $fQueryComputers | Sort Name;
      Return $fQueryComputers;
  };
-Function Get-Filename { Param ( $fFileNameText, $fCustomerName ); ##
+ Function Get-Filename { Param ( $fFileNameText, $fCustomerName ); ##
   # Add this line to Params: $fFileName = (Get-FileName -fFileNameText "<FILENAMETEXT>" -fCustomerName $fCustomerName)
   Return "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)$(($fFileNameText).Split([IO.Path]::GetInvalidFileNameChars()) -join '_')_($(get-date -f "yyyy-MM-dd_HH.mm"))";
   #Return "$($env:USERPROFILE)\Desktop\$($fCustomerName)$()$fFileNameText).Split([IO.Path]::GetInvalidFileNameChars())_$(get-date -f "yyyy-MM-dd_HH.mm")";
