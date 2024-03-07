@@ -336,7 +336,8 @@ Function Get-TimeSyncStatus-Domain {## Get TimeSync Status (Registry) - need an 
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
-    $fFileName = "$(Get-FilePath)\$($fCustomerName)_TimeSyncStatus_$(get-date -f yyyy-MM-dd_HH.mm)"
+    $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fFileName = (Get-FileName -fFileNameText "TimeSyncStatuss" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get TimeSync Status (Registry)";
@@ -345,19 +346,34 @@ Function Get-TimeSyncStatus-Domain {## Get TimeSync Status (Registry) - need an 
       $TimeServiceStatus = Get-Service W32Time | Select DisplayName, Status
       $NTPConfigStatus = Get-ItemProperty $USING:NTP_reg | Select NtpServer, Type
       $NTPStatusResult = [pscustomobject]@{
-        "Servername" = "$($fQueryComputer.Name)"
+        "Servername" = "$($Env:COMPUTERNAME)"
+        "NtpServer" = $NTPConfigStatus.NtpServer
+        "NTPType" = $NTPConfigStatus.Type
+        "TimeServiceStatus" = $TimeServiceStatus.Status};
+      $NTPStatusResult; 
+    };
+    $fLocalBlock01 = {
+      $TimeServiceStatus = Get-Service W32Time | Select DisplayName, Status
+      $NTPConfigStatus = Get-ItemProperty $NTP_reg | Select NtpServer, Type
+      $NTPStatusResult = [pscustomobject]@{
+        "Servername" = "$($Env:COMPUTERNAME)"
         "NtpServer" = $NTPConfigStatus.NtpServer
         "NTPType" = $NTPConfigStatus.Type
         "TimeServiceStatus" = $TimeServiceStatus.Status};
       $NTPStatusResult; 
     };
     $fResult = Foreach ($fQueryComputer in $fQueryComputers) {
-      Invoke-Command -ComputerName $fQueryComputer -ScriptBlock $Scriptblock01
+      Write-Host "Querying Server: $($fQueryComputer.name)";
+      IF ($fQueryComputer.name -eq $Env:COMPUTERNAME) {
+        Invoke-Command -scriptblock $fLocalBlock01;
+      } ELSE {
+        Invoke-Command -ComputerName $fQueryComputer.name -ScriptBlock $Scriptblock01
+	  };
     };
  ## Output
     #$fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus;
   ## Exports
-    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
+    If (($fExport -eq "Y") -or ($fExport -eq "YES")) { $fResult | Sort Servername | Select Servername, NTPServer, NTPType, TimeServiceStatus | Export-CSV "$($fFileName).csv" -Delimiter ';' -Encoding UTF8 -NoTypeInformation; };
   ## Return
     [hashtable]$Return = @{};
     $Return.TimeSyncStatus = $fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus;
