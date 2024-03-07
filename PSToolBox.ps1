@@ -18,7 +18,7 @@ Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
    # Add this line to Params: $fQueryComputers = $(Get-QueryComputers -DefaultComputerSearch "*" -DefaultComputerExcludeList ""), # Enter SearchName(s) / ServerName(s), separated by comma
    Param( $DefaultComputerSearch, $DefaultComputerExcludeList,
      $fQueryComputerSearch = ("$($DefaultComputerSearch)" | %{ If($Entry = @(((Read-Host "  Enter SearchName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} }),
-	 $fQueryComputerExcludeList = ("$($DefaultComputerExcludeList)" | %{ If($Entry = @(((Read-Host "  Enter ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} })
+     $fQueryComputerExcludeList = ("$($DefaultComputerExcludeList)" | %{ If($Entry = @(((Read-Host "  Enter Exclusion ServerName(s), separated by comma ( Default: $_ )").Split(",")).Trim())){$Entry} Else {((($_).Split(",")).Trim())} })
  );
    ## Script
 	 $fQueryComputers = Foreach ($fComputerSearch in $fQueryComputerSearch) {(Get-ADComputer -Filter 'operatingsystem -like "*server*" -and enabled -eq "true"' -Properties * | where { $fQueryComputerExcludeList -notcontains $_.name} -ErrorAction Continue | where { ($_.name -like $fComputerSearch)} -ErrorAction Continue)};
