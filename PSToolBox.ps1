@@ -25,10 +25,11 @@ Function Get-QueryComputers {  ### Get-QueryComputers - Get Domain Servers names
      $fQueryComputers = $fQueryComputers | Sort Name;
      Return $fQueryComputers;
  };
- Function Get-Filename { Param ( $fFileNameText, $fCustomerName ); ##
+Function Get-Filename { Param ( $fFileNameText, $fCustomerName ); ##
   # Add this line to Params: $fFileName = (Get-FileName -fFileNameText "<FILENAMETEXT>" -fCustomerName $fCustomerName)
-  Return "$([Environment]::GetFolderPath("Desktop"))\$($fCustomerName)$(($fFileNameText).Split([IO.Path]::GetInvalidFileNameChars()) -join '_')_($(get-date -f "yyyy-MM-dd_HH.mm"))";
-  #Return "$($env:USERPROFILE)\Desktop\$($fCustomerName)$()$fFileNameText).Split([IO.Path]::GetInvalidFileNameChars())_$(get-date -f "yyyy-MM-dd_HH.mm")";
+  $fFileNameBase = "$($fCustomerName)$(($fFileNameText).Split([IO.Path]::GetInvalidFileNameChars()) -join '_')_($(get-date -f "yyyy-MM-dd_HH.mm"))"
+  Return "$([Environment]::GetFolderPath("Desktop"))\$($fFileNameBase)";
+  #Return "$($env:USERPROFILE)\Desktop\$($fFileNameBase)";
 };
 #
 ### Functions
@@ -651,7 +652,7 @@ Function ToolboxMenu {
         Pause;
       };
       "16" { "`n`n  You selected: Get TimeSync Status for Domain Servers`n"
-        $Result = Get-TimeSyncStatusDomain; $Result.TimeSyncStatus | FT -Autosize;
+        $Result = Get-TimeSyncStatus-Domain; $Result.TimeSyncStatus | FT -Autosize;
         Pause;
       };
       "17" { "`n`n  You selected: Get DateTimeStatus for Domain Servers`n"
