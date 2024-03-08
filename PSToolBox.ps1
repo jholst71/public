@@ -332,17 +332,18 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $Return.ExpiredCertificates = $fResult |  sort NotAfter, NotAfter | Select PSComputerName, NotAfter, FriendlyName, Subject;
     Return $Return;
 };
-Function Get-TimeSyncStatus-Domain {## Get TimeSync Status (Registry) - need an AD Server or Server with RSAT
+Function Get-TimeSyncStatusDomain {## Get TimeSync Status (Registry) - need an AD Server or Server with RSAT
   Param(
     $fCustomerName = $(Get-CustomerName),
     $fQueryComputers = $(Get-QueryComputers),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
+    $fJobNamePrefix = "TimeSyncStatus_",
     $fFileName = (Get-FileName -fFileNameText "TimeSyncStatuss" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get TimeSync Status (Registry)";
     $NTP_reg = "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters"
-    $Scriptblock01 = {
+    $fBlock01 = {
       $TimeServiceStatus = Get-Service W32Time | Select DisplayName, Status
       $NTPConfigStatus = Get-ItemProperty $USING:NTP_reg | Select NtpServer, Type
       $NTPStatusResult = [pscustomobject]@{
@@ -365,11 +366,15 @@ Function Get-TimeSyncStatus-Domain {## Get TimeSync Status (Registry) - need an 
     $fResult = Foreach ($fQueryComputer in $fQueryComputers) {
       Write-Host "Querying Server: $($fQueryComputer.name)";
       IF ($fQueryComputer.name -eq $Env:COMPUTERNAME) {
-        Invoke-Command -scriptblock $fLocalBlock01;
+        $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01;
       } ELSE {
-        Invoke-Command -ComputerName $fQueryComputer.name -ScriptBlock $Scriptblock01
+        $JobResult = Invoke-Command -ComputerName $fQueryComputer.name -ScriptBlock $fBlock01 -JobName "$($fJobNamePrefix)$($fQueryComputer)" -ThrottleLimit 16 -AsJob
 	  };
     };
+    Write-Host "  Waiting for jobs to complete... `n";
+    Show-JobStatus $fJobNamePrefix;
+    $fResult = Foreach ($fJob in (Get-Job -Name "$($fJobNamePrefix)*")) {Receive-Job -id $fJob.ID -Keep}; Get-Job -State Completed | Remove-Job;
+    $fResult = $fResult + $fLocalHostResult;
  ## Output
     #$fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus;
   ## Exports
@@ -378,7 +383,7 @@ Function Get-TimeSyncStatus-Domain {## Get TimeSync Status (Registry) - need an 
     [hashtable]$Return = @{};
     $Return.TimeSyncStatus = $fResult | Sort Servername | FT Servername, NTPServer, NTPType, TimeServiceStatus;
     Return $Return;
-}
+};
 Function Get-DateTimeStatusDomain {## Get Date & Time Status - need an AD Server or Server with RSAT
   Param(
     $fCustomerName = $(Get-CustomerName),
@@ -646,7 +651,7 @@ Function ToolboxMenu {
         Pause;
       };
       "16" { "`n`n  You selected: Get TimeSync Status for Domain Servers`n"
-        $Result = Get-TimeSyncStatus-Domain; $Result.TimeSyncStatus | FT -Autosize;
+        $Result = Get-TimeSyncStatusDomain; $Result.TimeSyncStatus | FT -Autosize;
         Pause;
       };
       "17" { "`n`n  You selected: Get DateTimeStatus for Domain Servers`n"
