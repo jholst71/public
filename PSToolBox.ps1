@@ -339,7 +339,7 @@ Function Get-TimeSyncStatusDomain {## Get TimeSync Status (Registry) - need an A
     $fQueryComputers = $(Get-QueryComputers),
     $fExport = ("Yes" | %{ If($Entry = Read-Host "  Export result to file ( Y/N - Default: $_ )"){$Entry} Else {$_} }),
     $fJobNamePrefix = "TimeSyncStatus_",
-    $fFileName = (Get-FileName -fFileNameText "TimeSyncStatuss" -fCustomerName $fCustomerName)
+    $fFileName = (Get-FileName -fFileNameText "TimeSyncStatus" -fCustomerName $fCustomerName)
   );
   ## Script
     Show-Title "Get TimeSync Status (Registry)";
