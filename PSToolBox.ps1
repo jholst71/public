@@ -652,7 +652,7 @@ Function ToolboxMenu {
         Pause;
       };
       "16" { "`n`n  You selected: Get TimeSync Status for Domain Servers`n"
-        $Result = Get-TimeSyncStatus-Domain; $Result.TimeSyncStatus | FT -Autosize;
+        $Result = Get-TimeSyncStatusDomain; $Result.TimeSyncStatus | FT -Autosize;
         Pause;
       };
       "17" { "`n`n  You selected: Get DateTimeStatus for Domain Servers`n"
