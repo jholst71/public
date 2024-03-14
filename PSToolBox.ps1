@@ -287,7 +287,7 @@ Function Get-ExpiredCertificatesLocal {## Get-ExpiredCertificates
   ## Script
     Show-Title "Get Certificates expired or expire within next $($fExpiresBeforeDays) days on Local Server";
 	$fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
-    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter
+    $fResult = Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject, FriendlyName, NotAfter, @{Name="ParentPath";Expression={$_.PSParentPath.Replace("Microsoft.PowerShell.Security\Certificate::","")}}, Issuer;
   ## Output
     #$fResult | sort NotAfter, FriendlyName | Select NotAfter, FriendlyName, Subject | FT -autosize;
   ## Exports
@@ -312,8 +312,8 @@ Function Get-ExpiredCertificatesDomain {## Get-Expired_Certificates
     $fExpiresBefore = [DateTime]::Now.AddDays($($fExpiresBeforeDays));
     $fResult = Foreach ($fQueryComputer in $fQueryComputers.name) { # Get $fQueryComputers-Values like .Name, .DNSHostName, or add them to variables in the scriptblocks/functions
       Write-Host "Querying Server: $($fQueryComputer)";
-      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject,FriendlyName,NotAfter};
-      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject,FriendlyName,NotAfter;};
+      $fBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$Using:fExpiresBefore"} | ? {($_.Subject -like $Using:fCertSearch) -or ($_.FriendlyName -like $Using:fCertSearch)} | Select Subject, FriendlyName, NotAfter, @{Name="ParentPath";Expression={$_.PSParentPath.Replace("Microsoft.PowerShell.Security\Certificate::","")}}, Issuer};
+      $fLocalBlock01 = {Get-childitem -path "cert:LocalMachine\my" -Recurse | ? {$_.NotAfter -lt "$fExpiresBefore"} | ? {($_.Subject -like $fCertSearch) -or ($_.FriendlyName -like $fCertSearch)} | Select Subject, FriendlyName, NotAfter, @{Name="ParentPath";Expression={$_.PSParentPath.Replace("Microsoft.PowerShell.Security\Certificate::","")}}, Issuer;};
       IF ($fQueryComputer -eq $Env:COMPUTERNAME) {
         $fLocalHostResult = Invoke-Command -scriptblock $fLocalBlock01;
       } ELSE {
